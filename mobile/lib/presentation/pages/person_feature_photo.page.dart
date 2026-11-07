@@ -1,6 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
@@ -66,7 +66,7 @@ class PersonFeaturePhotoPage extends HookConsumerWidget {
       final updated = await ref.read(Store.people).updateFeaturePhoto(person.id, asset.id);
       if (context.mounted) {
         ImmichToast.show(context: context, msg: '人物封面已更新', toastType: ToastType.success);
-        context.pop<Person>(updated);
+        Navigator.of(context).pop(updated);
       }
     } catch (error) {
       if (context.mounted) {

@@ -1,6 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/data/store.dart';
@@ -64,7 +64,7 @@ class MergePeoplePage extends HookConsumerWidget {
           return;
         }
         ImmichToast.show(context: context, msg: '已合并 ${selected.value.length + 1} 个人物', toastType: ToastType.success);
-        context.pop<Person>(merged);
+        Navigator.of(context).pop(merged);
       } catch (error) {
         if (context.mounted) {
           ImmichToast.show(context: context, msg: '合并失败：$error', toastType: ToastType.error);

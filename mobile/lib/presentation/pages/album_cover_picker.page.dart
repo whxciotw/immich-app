@@ -59,7 +59,7 @@ class AlbumCoverPickerPage extends HookConsumerWidget {
       await ref.read(remoteAlbumServiceProvider).updateAlbum(album.id, thumbnailAssetId: asset.id);
       if (context.mounted) {
         ImmichToast.show(context: context, msg: '相册封面已更新', toastType: ToastType.success);
-        context.pop<bool>(true);
+        Navigator.of(context).pop(true);
       }
     } catch (error) {
       if (context.mounted) {
