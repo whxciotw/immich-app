@@ -10,8 +10,7 @@ that publishes an unofficial Android build for personal use.
    map view. This fork uses the device's last known location when the location
    permission has already been granted, and a neutral view otherwise.
 2. **Separate application id** — `app.alextran.immich.yunshang`, so it can be
-   installed next to the official Immich app. The launcher name is
-   `Immich Yunshang`.
+   installed next to the official Immich app. The launcher name is `Immich`.
 3. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.

@@ -68,7 +68,7 @@ android {
       // Unofficial "yunshang" build: distinct applicationId so it can coexist
       // with the official Immich app, and a distinguishable launcher name.
       applicationIdSuffix ".yunshang"
-      resValue "string", "app_name", "Immich Yunshang"
+      resValue "string", "app_name", "Immich"
 
       def hasKeystore = file("../key.jks").exists() && file("../key.jks").length() > 0
       signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
