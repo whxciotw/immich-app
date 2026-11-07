@@ -11,12 +11,21 @@ that publishes an unofficial Android build for personal use.
    permission has already been granted, and a neutral view otherwise.
 2. **Separate application id** — `app.alextran.immich.yunshang`, so it can be
    installed next to the official Immich app. The launcher name is `Immich`.
-3. **In-app updates from this repository** — the app checks
+3. **Places page hierarchy** — the Places list is a collapsible
+   country → province → city tree (countries expanded by default), with
+   asset counts, name sorting, a search box that flattens the results and an
+   expand/collapse-all button in the app bar.
+4. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.
    Two settings under *Settings → Advanced* control this:
    - `启动时检查更新` (check on launch, default **on**)
    - `自动下载更新包` (auto download, default **off**)
+
+   Split APKs built by Flutter carry an ABI-specific `versionCode`
+   (`universal` is the base, `armeabi-v7a` +1000, `arm64-v8a` +2000,
+   `x86_64` +4000). `latest.json` publishes the code per asset and the app
+   compares against the asset matching the device ABI.
 
    Android does not allow silent installs for normal apps, so the final
    confirmation is always shown by the system installer.
@@ -28,7 +37,7 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current build: **v3.3.6-yunshang.1** (upstream `v3.3.6`).
+Current build: **v3.3.6-yunshang.3** (upstream `v3.3.6`).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:
