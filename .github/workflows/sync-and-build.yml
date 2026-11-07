@@ -157,6 +157,7 @@ jobs:
         with:
           version: 2026.10.5
           install: true
+          install_args: "--yes"
           cache: true
           working_directory: .
 
@@ -166,6 +167,7 @@ jobs:
         with:
           version: 2026.10.5
           install: true
+          install_args: "--yes"
           cache: true
           working_directory: ./mobile
 
