@@ -8,7 +8,9 @@ that publishes an unofficial Android build for personal use.
 1. **Places map initial location fix** — upstream hard-codes Honolulu
    (`21.44950, -157.91959`) for the Places card/page and `(0, 0) zoom 0` for the
    map view. This fork uses the device's last known location when the location
-   permission has already been granted, and a neutral view otherwise.
+   permission has already been granted; without it, it falls back to the
+   5%-95% bounding box of the user's geotagged photos, and only uses a neutral
+   view when there are no geotagged assets at all.
 2. **Separate application id** — `app.alextran.immich.yunshang`, so it can be
    installed next to the official Immich app. The launcher name is `Immich`.
 3. **Places page hierarchy** — the Places list is a collapsible
@@ -18,14 +20,18 @@ that publishes an unofficial Android build for personal use.
 4. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.
-   Two settings under *Settings → Advanced* control this:
+   Settings under *Settings → Advanced*:
    - `启动时检查更新` (check on launch, default **on**)
    - `自动下载更新包` (auto download, default **off**)
+   - `立即检查更新` (manual check; bypasses the switch/throttle/ignored version)
 
    Split APKs built by Flutter carry an ABI-specific `versionCode`
    (`universal` is the base, `armeabi-v7a` +1000, `arm64-v8a` +2000,
    `x86_64` +4000). `latest.json` publishes the code per asset and the app
    compares against the asset matching the device ABI.
+
+Release APKs are signed with **v1 + v2 + v3** schemes for compatibility with
+older/OEM package installers (MIUI/HyperOS included).
 
    Android does not allow silent installs for normal apps, so the final
    confirmation is always shown by the system installer.
@@ -37,7 +43,7 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current build: **v3.3.6-yunshang.3** (upstream `v3.3.6`).
+Current build: **v3.3.6-yunshang.4** (upstream `v3.3.6`).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:

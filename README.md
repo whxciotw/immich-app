@@ -16,7 +16,7 @@
 
 | 项 | 官方 App | 本仓库（yunshang build） |
 | --- | --- | --- |
-| Places 地图初始位置 | 写死夏威夷 / `(0,0) zoom 0` | 使用设备最近位置；无权限时中性视野 |
+| Places 地图初始位置 | 写死夏威夷 / `(0,0) zoom 0` | 设备最近位置 → 相册分布范围 → 中性视野 |
 | Places 列表 | 平铺城市 | **国家 → 省 → 市 三级折叠**，默认展开国家，支持全部展开/折叠、搜索、按名称排序、显示照片数量 |
 | 更新来源 | Play Store / F-Droid / App Store | 本仓库 **GitHub Releases**（App 内检查/下载/安装 + Obtainium） |
 | 包名 | `app.alextran.immich` | `app.alextran.immich.yunshang`（可与官方共存） |
@@ -45,7 +45,8 @@
 
 ## 更新
 
-- **App 内更新**：Settings → Advanced → `启动时检查更新`（默认开）/ `自动下载更新包`（默认关）。
+- **App 内更新**：Settings → Advanced → `启动时检查更新`（默认开）/ `自动下载更新包`（默认关）/
+  `立即检查更新`（手动，绕过节流与"忽略此版本"）。
   发现新版本后会下载并拉起 Android 系统安装器。普通 App 无法静默安装，最后一步需要你点"安装"确认。
 - **Obtainium**：用 [Obtainium](https://github.com/ImranR98/Obtainium) 添加本仓库即可跟踪 Releases。
 - 不要从 Play 商店更新官方 Immich 来更新本 App：包名和签名都不同。
