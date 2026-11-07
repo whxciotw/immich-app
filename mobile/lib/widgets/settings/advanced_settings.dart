@@ -59,10 +59,10 @@ class AdvancedSettings extends HookConsumerWidget {
       }
       checkingUpdate.value = true;
       final status = await YunshangUpdater.checkNow(context);
-      checkingUpdate.value = false;
       if (!context.mounted) {
         return;
       }
+      checkingUpdate.value = false;
       switch (status) {
         case UpdateCheckStatus.upToDate:
           context.scaffoldMessenger.showSnackBar(
