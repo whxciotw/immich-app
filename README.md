@@ -17,7 +17,7 @@
 | 项 | 官方 App | 本仓库（yunshang build） |
 | --- | --- | --- |
 | Places 地图初始位置 | 写死夏威夷 / `(0,0) zoom 0` | 使用设备最近位置；无权限时中性视野 |
-| Places 列表 | 平铺城市 | **国家 → 省 → 市 三级折叠**，默认展开国家，支持全部展开/折叠、搜索、数量排序 |
+| Places 列表 | 平铺城市 | **国家 → 省 → 市 三级折叠**，默认展开国家，支持全部展开/折叠、搜索、按名称排序、显示照片数量 |
 | 更新来源 | Play Store / F-Droid / App Store | 本仓库 **GitHub Releases**（App 内检查/下载/安装 + Obtainium） |
 | 包名 | `app.alextran.immich` | `app.alextran.immich.yunshang`（可与官方共存） |
 | 桌面名称 | `Immich` | `Immich`（同名，按包名区分） |
