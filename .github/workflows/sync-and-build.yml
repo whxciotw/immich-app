@@ -240,6 +240,7 @@ jobs:
         if: steps.version.outputs.should_run == 'true'
         env:
           BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
           BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
         run: |
           set -euo pipefail
@@ -261,10 +262,20 @@ jobs:
             [ "$cert" = "$expected" ] || { echo "signature mismatch for $apk: $cert" >&2; exit 1; }
           done
 
-          badging=$("$aapt2" dump badging "dist/Immich-${BUILD_TAG}-universal.apk" | head -1)
-          echo "$badging"
-          echo "$badging" | grep -q "package: name='app.alextran.immich.yunshang'" || { echo "unexpected package name" >&2; exit 1; }
-          echo "$badging" | grep -q "versionCode='${BUILD_NUMBER}'" || { echo "unexpected versionCode" >&2; exit 1; }
+          : > dist/apk-info.tsv
+          for apk in dist/*.apk; do
+            badging=$("$aapt2" dump badging "$apk" | head -1)
+            echo "$badging"
+            echo "$badging" | grep -q "package: name='app.alextran.immich.yunshang'" || { echo "unexpected package name in $apk" >&2; exit 1; }
+            code=$(echo "$badging" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+            vname=$(echo "$badging" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+            [ -n "$code" ] && [ -n "$vname" ] || { echo "cannot parse badging for $apk" >&2; exit 1; }
+            [ "$vname" = "$BUILD_NAME" ] || { echo "unexpected versionName for $apk: $vname" >&2; exit 1; }
+            printf '%s\t%s\t%s\n' "$(basename "$apk")" "$code" "$vname" >> dist/apk-info.tsv
+          done
+          universal_line=$(grep 'universal.apk' dist/apk-info.tsv)
+          [ "$(echo "$universal_line" | cut -f2)" = "$BUILD_NUMBER" ] || { echo "unexpected universal versionCode" >&2; exit 1; }
+          cat dist/apk-info.tsv
 
       - name: Generate latest.json and checksums
         if: steps.version.outputs.should_run == 'true'
@@ -282,6 +293,10 @@ jobs:
           name = os.environ["BUILD_NAME"]
           code = int(os.environ["BUILD_NUMBER"])
           repo = os.environ["GITHUB_REPOSITORY"]
+          info = {}
+          for line in open("dist/apk-info.tsv"):
+              filename, version_code, version_name = line.rstrip("\n").split("\t")
+              info[filename] = int(version_code)
           assets = {}
           checksums = []
           for path in sorted(glob.glob("dist/*.apk")):
@@ -292,10 +307,15 @@ jobs:
               assets[suffix] = {
                   "url": f"https://github.com/{repo}/releases/download/{tag}/{filename}",
                   "sha256": digest,
+                  # Flutter's split-per-abi adds an ABI-specific versionCode offset.
+                  "versionCode": info[filename],
               }
+          # Top-level value is kept for older clients: use the largest per-ABI
+          # code so an installed split APK still sees "newer" than itself.
+          top_code = max(info.values()) if info else code
           payload = {
               "versionName": name,
-              "versionCode": code,
+              "versionCode": top_code,
               "tag": tag,
               "publishedAt": None,
               "notesUrl": f"https://github.com/{repo}/releases/tag/{tag}",

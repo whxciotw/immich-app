@@ -1,8 +1,13 @@
 class YunshangReleaseAsset {
-  const YunshangReleaseAsset({required this.url, required this.sha256});
+  const YunshangReleaseAsset({required this.url, required this.sha256, this.versionCode});
 
   final String url;
   final String sha256;
+
+  /// Per-ABI version code. Flutter's `--split-per-abi` adds an ABI-specific
+  /// offset to the version code, so the device's own build number must be
+  /// compared against the matching asset rather than the universal build.
+  final int? versionCode;
 
   static YunshangReleaseAsset? fromJson(Object? json) {
     if (json is! Map) {
@@ -13,7 +18,11 @@ class YunshangReleaseAsset {
     if (url == null || sha256 == null || url.isEmpty || sha256.isEmpty) {
       return null;
     }
-    return YunshangReleaseAsset(url: url, sha256: sha256);
+    return YunshangReleaseAsset(
+      url: url,
+      sha256: sha256,
+      versionCode: int.tryParse(json['versionCode']?.toString() ?? ''),
+    );
   }
 }
 

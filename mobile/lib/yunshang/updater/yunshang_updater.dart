@@ -38,8 +38,13 @@ class YunshangUpdater {
 
       await Store.put(StoreKey.yunshangLastCheck, now);
 
+      final abi = await YunshangUpdateService.deviceAbi();
+      final asset = release.assetForAbi(abi);
+      // Split APKs get an ABI-specific versionCode from Flutter, so compare
+      // against the asset that will actually be installed.
+      final remoteCode = asset?.versionCode ?? release.versionCode;
       final currentCode = await YunshangUpdateService.currentVersionCode();
-      if (release.versionCode <= currentCode) {
+      if (remoteCode <= currentCode) {
         return;
       }
 
