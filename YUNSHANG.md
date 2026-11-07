@@ -29,6 +29,12 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
+Current build: **v3.3.6-yunshang.1** (upstream `v3.3.6`).
+
+If the daily scheduled run does not happen (GitHub disables schedules in forks
+until Actions is enabled for the fork), run it manually:
+`Actions → Sync upstream and build APK → Run workflow`.
+
 You can also use [Obtainium](https://github.com/ImranR98/Obtainium) to track this
 repository's GitHub releases and install updates from there.
 
@@ -48,6 +54,11 @@ repository. The base64 keystore is stored in GitHub Actions secrets
 `ANDROID_KEY_ALIAS`) and decoded only inside the build runner. Losing the key
 means no further over-the-top updates are possible; leaking it allows forged
 updates, so keep it offline and private.
+
+The keystore used for the first build was generated on the setup host under
+`/root/workspace/Immich/keystore/`; download `yunshang-release.jks` and
+`passwords.txt` and keep them offline before that directory is removed.
+
 
 ## Automation
 
