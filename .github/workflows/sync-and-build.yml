@@ -156,20 +156,27 @@ jobs:
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
         with:
           version: 2026.10.5
-          install: true
-          install_args: "--yes"
+          install: false
           cache: true
           working_directory: .
+
+      - name: Install root tools
+        if: steps.version.outputs.should_run == 'true'
+        run: mise install --yes
 
       - name: Setup mise (mobile)
         if: steps.version.outputs.should_run == 'true'
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
         with:
           version: 2026.10.5
-          install: true
-          install_args: "--yes"
+          install: false
           cache: true
           working_directory: ./mobile
+
+      - name: Install mobile tools
+        if: steps.version.outputs.should_run == 'true'
+        working-directory: mobile
+        run: mise install --yes
 
       - name: Setup Android SDK
         if: steps.version.outputs.should_run == 'true'
