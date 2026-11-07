@@ -36,6 +36,9 @@ env:
 jobs:
   sync-build-release:
     runs-on: ubuntu-latest
+    env:
+      # Needed so `gh release view` / `gh issue create` can talk to the API.
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
