@@ -17,7 +17,12 @@ that publishes an unofficial Android build for personal use.
    country → province → city tree (countries expanded by default), with
    asset counts, name sorting, a search box that flattens the results and an
    expand/collapse-all button in the app bar.
-4. **In-app updates from this repository** — the app checks
+4. **People management** — set a person's feature photo (avatar), merge up to
+   five people, hide/show a person, and show hidden people from the People page
+   (features that used to be web-only).
+5. **Album cover** — choose any photo in an album as its cover from
+   *Album → Options → 选择封面照片*.
+6. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.
    Settings under *Settings → Advanced*:
@@ -43,7 +48,7 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current build: **v3.3.6-yunshang.4** (upstream `v3.3.6`).
+Current build: **v3.3.6-yunshang.5** (upstream `v3.3.6`).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:

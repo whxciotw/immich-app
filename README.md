@@ -18,6 +18,8 @@
 | --- | --- | --- |
 | Places 地图初始位置 | 写死夏威夷 / `(0,0) zoom 0` | 设备最近位置 → 相册分布范围 → 中性视野 |
 | Places 列表 | 平铺城市 | **国家 → 省 → 市 三级折叠**，默认展开国家，支持全部展开/折叠、搜索、按名称排序、显示照片数量 |
+| 人物管理 | 仅网页端 | 选择人物封面、合并人物、隐藏/显示人物、查看已隐藏人物 |
+| 相册封面 | 仅网页端 | 相册 → 选项 → 选择封面照片 |
 | 更新来源 | Play Store / F-Droid / App Store | 本仓库 **GitHub Releases**（App 内检查/下载/安装 + Obtainium） |
 | 包名 | `app.alextran.immich` | `app.alextran.immich.yunshang`（可与官方共存） |
 | 桌面名称 | `Immich` | `Immich`（同名，按包名区分） |
