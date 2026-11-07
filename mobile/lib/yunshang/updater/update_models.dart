@@ -78,6 +78,8 @@ class YunshangRelease {
     if (abi != null && assets.containsKey(abi)) {
       return assets[abi];
     }
-    return assets['universal'] ?? assets['arm64-v8a'];
+    // Never cross-fallback to another ABI: a mismatched APK would fail to
+    // install. Universal is the only safe fallback.
+    return assets['universal'];
   }
 }

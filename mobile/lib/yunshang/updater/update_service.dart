@@ -20,11 +20,22 @@ class _DigestSink implements Sink<Digest> {
   void close() {}
 }
 
+/// Result of querying `latest.json`; keeps the error so the UI can tell
+/// "already up to date" from "network/parse failure".
+class UpdateFetchResult {
+  const UpdateFetchResult.success(this.release) : error = null;
+
+  const UpdateFetchResult.failure(this.error) : release = null;
+
+  final YunshangRelease? release;
+  final Object? error;
+}
+
 class YunshangUpdateService {
   static final http.Client _client = http.Client();
   static const MethodChannel _channel = MethodChannel(kYunshangInstallerChannel);
 
-  static Future<YunshangRelease?> fetchLatest() async {
+  static Future<UpdateFetchResult> fetchLatest() async {
     try {
       final response = await _client
           .get(
@@ -33,19 +44,27 @@ class YunshangUpdateService {
           )
           .timeout(kYunshangHttpTimeout);
       if (response.statusCode != 200) {
-        return null;
+        return UpdateFetchResult.failure('HTTP ${response.statusCode}');
       }
-      return YunshangRelease.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
-    } catch (_) {
-      // Update checks are best effort: no network / rate limit / bad JSON are
-      // all handled by silently skipping the check.
-      return null;
+
+      final release = YunshangRelease.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
+      if (release == null) {
+        return const UpdateFetchResult.failure('Invalid latest.json');
+      }
+      return UpdateFetchResult.success(release);
+    } catch (error) {
+      return UpdateFetchResult.failure(error);
     }
   }
 
   static Future<int> currentVersionCode() async {
     final info = await PackageInfo.fromPlatform();
     return int.tryParse(info.buildNumber) ?? 0;
+  }
+
+  static Future<String> currentVersionName() async {
+    final info = await PackageInfo.fromPlatform();
+    return info.version;
   }
 
   static Future<String?> deviceAbi() async {
@@ -90,7 +109,8 @@ class YunshangUpdateService {
       }
 
       final directory = await getTemporaryDirectory();
-      target = File('${directory.path}/yunshang-update-${release.versionCode}.apk');
+      final code = asset.versionCode ?? release.versionCode;
+      target = File('${directory.path}/yunshang-update-$code.apk');
       if (await target.exists()) {
         await target.delete();
       }

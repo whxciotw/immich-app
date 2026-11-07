@@ -21,21 +21,50 @@ class YunshangUpdateDialog extends StatefulWidget {
   State<YunshangUpdateDialog> createState() => _YunshangUpdateDialogState();
 }
 
-class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> {
+class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> with WidgetsBindingObserver {
   _UpdatePhase _phase = _UpdatePhase.prompt;
   double _progress = 0;
   String _message = '';
   File? _apk;
+  bool _canInstall = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (widget.autoDownload) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           unawaited(_downloadAndInstall());
         }
       });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _phase != _UpdatePhase.ready || _apk == null) {
+      return;
+    }
+    unawaited(_recheckInstallPermission());
+  }
+
+  Future<void> _recheckInstallPermission() async {
+    final canInstall = await YunshangUpdateService.canInstallPackages();
+    if (!mounted) {
+      return;
+    }
+    if (canInstall && !_canInstall) {
+      setState(() {
+        _canInstall = true;
+      });
+      await _install();
     }
   }
 
@@ -95,6 +124,7 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> {
     if (!mounted) {
       return;
     }
+    _canInstall = canInstall;
     if (!canInstall) {
       setState(() {
         _phase = _UpdatePhase.ready;
@@ -138,12 +168,8 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> {
       return;
     }
     setState(() {
-      _message = '已打开系统设置，允许后请回到这里完成安装。';
+      _message = '已打开系统设置，允许后返回本页会自动继续安装。';
     });
-    final canInstall = await YunshangUpdateService.canInstallPackages();
-    if (canInstall && mounted) {
-      unawaited(_install());
-    }
   }
 
   @override
@@ -190,8 +216,8 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> {
             ),
           if (_phase == _UpdatePhase.ready)
             FilledButton(
-              onPressed: _openInstallSettings,
-              child: const Text('去允许安装'),
+              onPressed: _canInstall ? _install : _openInstallSettings,
+              child: Text(_canInstall ? '继续安装' : '去允许安装'),
             ),
         ],
         TextButton(

@@ -73,6 +73,10 @@ class AssetService {
     return _remoteRepository.watchExif(id);
   }
 
+  Future<List<({double latitude, double longitude})>> getGeotaggedLocations() {
+    return _remoteRepository.getGeotaggedLocations();
+  }
+
   Future<List<PlaceEntry>> getPlaces(String userId) {
     return _remoteRepository.getPlaces(userId);
   }

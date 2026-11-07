@@ -70,6 +70,32 @@ class RemoteAssetRepository extends DatabaseAccessor<Drift> with $RemoteAssetRep
       .map((row) => row.toDto())
       .watchSingleOrNull();
 
+  /// All geotagged assets (timeline, not deleted) as lat/lon pairs.
+  /// Used to derive a sensible initial map view when the device location is
+  /// not available (no permission / no cached fix).
+  Future<List<({double latitude, double longitude})>> getGeotaggedLocations() {
+    final exif = _db.remoteExifEntity;
+    final asset = _db.remoteAssetEntity;
+
+    final query =
+        _db.selectOnly(exif).join([
+            innerJoin(asset, asset.id.equalsExp(exif.assetId)),
+          ])
+          ..addColumns([exif.latitude, exif.longitude])
+          ..where(
+            exif.latitude.isNotNull() &
+                exif.longitude.isNotNull() &
+                asset.deletedAt.isNull() &
+                asset.visibility.equals(AssetVisibility.timeline.index),
+          );
+
+    return query.map((row) {
+      final latitude = row.read(exif.latitude);
+      final longitude = row.read(exif.longitude);
+      return (latitude: latitude!, longitude: longitude!);
+    }).get();
+  }
+
   Future<List<PlaceEntry>> getPlaces(String userId) {
     final asset = Subquery(
       _db.remoteAssetEntity.select()

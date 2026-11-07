@@ -8,32 +8,44 @@ import 'update_config.dart';
 import 'update_dialog.dart';
 import 'update_service.dart';
 
-/// Checks the GitHub releases of the unofficial build once per launch (and at
-/// most once per [kYunshangCheckInterval]) and offers to update.
+enum UpdateCheckStatus { updateAvailable, upToDate, ignored, disabled, throttled, error, busy, notMounted }
+
+/// Checks the GitHub releases of the unofficial build.
+///
+/// Automatic check: at most once per launch / [kYunshangCheckInterval].
+/// Manual check ([checkNow]): bypasses the switch, the 24h throttle and the
+/// per-version "ignore" record.
 class YunshangUpdater {
   static bool _checking = false;
 
-  static Future<void> maybeCheckOnLaunch(BuildContext context) async {
-    if (!Platform.isAndroid || _checking) {
-      return;
+  static bool get isChecking => _checking;
+
+  static Future<UpdateCheckStatus> checkForUpdates(BuildContext context, {bool manual = false}) async {
+    if (!Platform.isAndroid) {
+      return UpdateCheckStatus.error;
+    }
+    if (_checking) {
+      return UpdateCheckStatus.busy;
     }
 
     _checking = true;
     try {
-      final enabled = Store.get(StoreKey.yunshangCheckUpdates, true);
-      if (!enabled) {
-        return;
+      if (!manual && !Store.get(StoreKey.yunshangCheckUpdates, true)) {
+        return UpdateCheckStatus.disabled;
       }
 
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final lastCheck = Store.tryGet(StoreKey.yunshangLastCheck) ?? 0;
-      if (lastCheck > 0 && now - lastCheck < kYunshangCheckInterval.inSeconds) {
-        return;
+      if (!manual) {
+        final lastCheck = Store.tryGet(StoreKey.yunshangLastCheck) ?? 0;
+        if (lastCheck > 0 && now - lastCheck < kYunshangCheckInterval.inSeconds) {
+          return UpdateCheckStatus.throttled;
+        }
       }
 
-      final release = await YunshangUpdateService.fetchLatest();
+      final fetched = await YunshangUpdateService.fetchLatest();
+      final release = fetched.release;
       if (release == null) {
-        return;
+        return UpdateCheckStatus.error;
       }
 
       await Store.put(StoreKey.yunshangLastCheck, now);
@@ -45,16 +57,16 @@ class YunshangUpdater {
       final remoteCode = asset?.versionCode ?? release.versionCode;
       final currentCode = await YunshangUpdateService.currentVersionCode();
       if (remoteCode <= currentCode) {
-        return;
+        return UpdateCheckStatus.upToDate;
       }
 
       final ignored = Store.tryGet(StoreKey.yunshangIgnoredVersion);
-      if (ignored == release.tag) {
-        return;
+      if (!manual && ignored == release.tag) {
+        return UpdateCheckStatus.ignored;
       }
 
       if (!context.mounted) {
-        return;
+        return UpdateCheckStatus.notMounted;
       }
 
       final autoDownload = Store.get(StoreKey.yunshangAutoDownload, false);
@@ -63,8 +75,20 @@ class YunshangUpdater {
         useRootNavigator: true,
         builder: (_) => YunshangUpdateDialog(release: release, autoDownload: autoDownload),
       );
+      return UpdateCheckStatus.updateAvailable;
     } finally {
       _checking = false;
     }
+  }
+
+  /// Silent check used when the app starts.
+  static Future<void> maybeCheckOnLaunch(BuildContext context) async {
+    await checkForUpdates(context);
+  }
+
+  /// Explicit "check now" from Settings: ignores the automatic-check switch,
+  /// the throttle and the ignored-version record.
+  static Future<UpdateCheckStatus> checkNow(BuildContext context) {
+    return checkForUpdates(context, manual: true);
   }
 }

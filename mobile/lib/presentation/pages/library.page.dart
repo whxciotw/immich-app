@@ -13,6 +13,7 @@ import 'package:immich_mobile/presentation/widgets/images/local_album_thumbnail.
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
+import 'package:immich_mobile/providers/infrastructure/map_bounds.provider.dart';
 import 'package:immich_mobile/presentation/widgets/people/partner_user_avatar.widget.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
@@ -218,16 +219,19 @@ class _PeopleCollectionCard extends ConsumerWidget {
   }
 }
 
-class _PlacesCollectionCard extends HookWidget {
+class _PlacesCollectionCard extends HookConsumerWidget {
   const _PlacesCollectionCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // The card preview must not pretend the user is in Honolulu: use the last
-    // known device location when the permission was already granted, otherwise
-    // fall back to a neutral world view. Never prompts.
+    // known device location when the permission was already granted, then fall
+    // back to the bounding box of the user's geotagged photos. Never prompts.
     final centre = useState<LatLng?>(null);
     final resolved = useState(false);
+    final libraryAsync = ref.watch(libraryMapViewProvider);
+    final libraryView = libraryAsync.valueOrNull;
+    final libraryResolved = !libraryAsync.isLoading;
 
     useEffect(() {
       var cancelled = false;
@@ -250,7 +254,7 @@ class _PlacesCollectionCard extends HookWidget {
         final size = context.width * widthFactor - 20.0;
 
         return GestureDetector(
-          onTap: () => context.pushRoute(PlaceRoute(currentLocation: centre.value)),
+          onTap: () => context.pushRoute(PlaceRoute(currentLocation: centre.value ?? libraryView?.center)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -263,14 +267,23 @@ class _PlacesCollectionCard extends HookWidget {
                     color: context.colorScheme.secondaryContainer.withAlpha(100),
                   ),
                   child: IgnorePointer(
-                    child: resolved.value
-                        ? MapThumbnail(
-                            zoom: centre.value == null ? 1 : 8,
-                            centre: centre.value ?? const LatLng(0, 0),
-                            showAttribution: false,
-                            themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
-                          )
-                        : const SizedBox.shrink(),
+                    child: Builder(
+                      builder: (context) {
+                        final lastKnown = centre.value;
+                        final mapCentre = lastKnown ?? libraryView?.center;
+                        final mapZoom = lastKnown != null ? 8.0 : (libraryView?.zoom ?? 1.0);
+                        final hasMap =
+                            (resolved.value && (lastKnown != null || libraryResolved)) || libraryView != null;
+                        return hasMap
+                            ? MapThumbnail(
+                                zoom: mapZoom,
+                                centre: mapCentre ?? const LatLng(0, 0),
+                                showAttribution: false,
+                                themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                              )
+                            : const SizedBox.shrink();
+                      },
+                    ),
                   ),
                 ),
               ),

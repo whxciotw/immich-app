@@ -15,6 +15,7 @@ import 'package:immich_mobile/presentation/widgets/bottom_sheet/base_bottom_shee
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/map_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map.state.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
+import 'package:immich_mobile/providers/infrastructure/map_bounds.provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
 import 'package:immich_mobile/utils/async_mutex.dart';
 import 'package:immich_mobile/utils/debounce.dart';
@@ -112,14 +113,24 @@ class _MapViewState extends ConsumerState<MapView> {
     }
 
     // Opened without an explicit target (e.g. from the Places collection card):
-    // fall back to the device location when the permission was already granted,
-    // otherwise keep the neutral world view.
+    // prefer the device location when the permission was already granted,
+    // otherwise use the bounding box of the user's geotagged photos and only
+    // fall back to the neutral world view when there are none.
     if (widget.initialLocation == null) {
       final (position, _) = await MapUtils.checkPermAndGetLocation(context: context, silent: true);
-      if (position != null && mounted) {
-        await controller.animateCamera(
-          CameraUpdate.newLatLngZoom(LatLng(position.latitude, position.longitude), MapUtils.mapZoomToAssetLevel),
-        );
+      LatLng? target;
+      var zoom = MapUtils.mapZoomToAssetLevel;
+      if (position != null) {
+        target = LatLng(position.latitude, position.longitude);
+      } else {
+        final libraryView = await ref.read(libraryMapViewProvider.future);
+        if (libraryView != null) {
+          target = libraryView.center;
+          zoom = libraryView.zoom;
+        }
+      }
+      if (target != null && mounted) {
+        await controller.animateCamera(CameraUpdate.newLatLngZoom(target, zoom));
       }
     }
 

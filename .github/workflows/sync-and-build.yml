@@ -289,7 +289,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import glob, hashlib, json, os
+          import datetime, glob, hashlib, json, os
 
           tag = os.environ["BUILD_TAG"]
           name = os.environ["BUILD_NAME"]
@@ -319,7 +319,7 @@ jobs:
               "versionName": name,
               "versionCode": top_code,
               "tag": tag,
-              "publishedAt": None,
+              "publishedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
               "notesUrl": f"https://github.com/{repo}/releases/tag/{tag}",
               "upstreamTag": os.environ["UPSTREAM_TAG"],
               "assets": assets,

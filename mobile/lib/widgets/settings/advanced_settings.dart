@@ -19,6 +19,8 @@ import 'package:immich_mobile/widgets/settings/custom_proxy_headers_settings/cus
 import 'package:immich_mobile/widgets/settings/ssl_client_cert_settings.dart';
 import 'package:immich_ui/immich_ui.dart';
 import 'package:logging/logging.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:immich_mobile/yunshang/updater/yunshang_updater.dart';
 
 class AdvancedSettings extends HookConsumerWidget {
   const AdvancedSettings({super.key});
@@ -38,6 +40,49 @@ class AdvancedSettings extends HookConsumerWidget {
     final readonlyModeEnabled = useAppSettingsState(AppSettingsEnum.readonlyModeEnabled);
     final yunshangCheckUpdates = useAppSettingsState(AppSettingsEnum.yunshangCheckUpdates);
     final yunshangAutoDownload = useAppSettingsState(AppSettingsEnum.yunshangAutoDownload);
+    final currentAppVersion = useState<String>('…');
+    final checkingUpdate = useState(false);
+
+    useEffect(() {
+      var cancelled = false;
+      PackageInfo.fromPlatform().then((info) {
+        if (!cancelled) {
+          currentAppVersion.value = info.version;
+        }
+      });
+      return () => cancelled = true;
+    }, const []);
+
+    Future<void> checkNow() async {
+      if (checkingUpdate.value) {
+        return;
+      }
+      checkingUpdate.value = true;
+      final status = await YunshangUpdater.checkNow(context);
+      checkingUpdate.value = false;
+      if (!context.mounted) {
+        return;
+      }
+      switch (status) {
+        case UpdateCheckStatus.upToDate:
+          context.scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('已是最新版本（${currentAppVersion.value}）')),
+          );
+          break;
+        case UpdateCheckStatus.error:
+          context.scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('检查更新失败，请检查网络后重试')),
+          );
+          break;
+        case UpdateCheckStatus.busy:
+          context.scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('正在检查更新，请稍候…')),
+          );
+          break;
+        default:
+          break;
+      }
+    }
 
     final logLevel = Level.LEVELS[levelId.value].name;
 
@@ -127,6 +172,16 @@ class AdvancedSettings extends HookConsumerWidget {
         valueNotifier: yunshangAutoDownload,
         title: '自动下载更新包',
         subtitle: '发现新版本后自动下载；安装仍需在系统界面确认',
+      ),
+      ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        leading: const Icon(Icons.refresh),
+        title: const Text('立即检查更新'),
+        subtitle: Text('当前版本 ${currentAppVersion.value}'),
+        trailing: checkingUpdate.value
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : null,
+        onTap: checkingUpdate.value ? null : checkNow,
       ),
       const CustomProxyHeaderSettings(),
       const SslClientCertSettings(),

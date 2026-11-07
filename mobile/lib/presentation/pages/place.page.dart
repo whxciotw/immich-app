@@ -12,6 +12,7 @@ import 'package:immich_mobile/presentation/pages/place_grouping.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/map/map_utils.dart';
 import 'package:immich_mobile/providers/infrastructure/asset.provider.dart';
+import 'package:immich_mobile/providers/infrastructure/map_bounds.provider.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/widgets/common/search_field.dart';
 import 'package:immich_mobile/widgets/map/map_thumbnail.dart';
@@ -141,18 +142,21 @@ class _PlaceSliverAppBar extends HookWidget {
   }
 }
 
-class _Map extends HookWidget {
+class _Map extends HookConsumerWidget {
   const _Map({this.currentLocation});
 
   final LatLng? currentLocation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Prefer the location passed in (e.g. from the asset viewer). Otherwise do a
     // cheap, permission-free lookup so the preview shows where the user actually
     // is instead of a hard-coded placeholder city. This never prompts.
     final centre = useState<LatLng?>(currentLocation);
     final resolved = useState(currentLocation != null);
+    final libraryAsync = ref.watch(libraryMapViewProvider);
+    final libraryView = libraryAsync.valueOrNull;
+    final libraryResolved = !libraryAsync.isLoading;
 
     useEffect(() {
       if (currentLocation != null) {
@@ -173,7 +177,10 @@ class _Map extends HookWidget {
       return () => cancelled = true;
     }, const []);
 
-    final location = centre.value;
+    final lastKnown = centre.value;
+    final mapCentre = lastKnown ?? libraryView?.center;
+    final mapZoom = lastKnown != null ? 8.0 : (libraryView?.zoom ?? 1.0);
+    final hasMap = (resolved.value && (lastKnown != null || libraryResolved)) || libraryView != null;
     return SliverPadding(
       padding: const EdgeInsets.all(16.0),
       sliver: SliverToBoxAdapter(
@@ -181,11 +188,11 @@ class _Map extends HookWidget {
           height: 200,
           width: context.width,
           // While resolving, render an empty box instead of a misleading city.
-          child: resolved.value
+          child: hasMap
               ? MapThumbnail(
-                  onTap: (_, _) => context.pushRoute(MapRoute(initialLocation: location)),
-                  zoom: location == null ? 1 : 8,
-                  centre: location ?? const LatLng(0, 0),
+                  onTap: (_, _) => context.pushRoute(MapRoute(initialLocation: mapCentre)),
+                  zoom: mapZoom,
+                  centre: mapCentre ?? const LatLng(0, 0),
                   showAttribution: false,
                   themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
                 )
