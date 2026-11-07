@@ -25,6 +25,7 @@ class PeopleCollectionPage extends ConsumerStatefulWidget {
 class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
   final FocusNode _formFocus = FocusNode();
   String? _search;
+  bool _showHidden = false;
 
   @override
   void dispose() {
@@ -34,7 +35,7 @@ class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final people = ref.watch(Store.people.all());
+    final people = ref.watch(Store.people.all(includeHidden: _showHidden));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -60,6 +61,11 @@ class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
                 onPressed: () {
                   setState(() => _search = _search == null ? '' : null);
                 },
+              ),
+              IconButton(
+                tooltip: _showHidden ? '隐藏已隐藏的人物' : '显示已隐藏的人物',
+                icon: Icon(_showHidden ? Icons.visibility : Icons.visibility_off),
+                onPressed: () => setState(() => _showHidden = !_showHidden),
               ),
             ],
           ),
@@ -97,12 +103,30 @@ class _PeopleCollectionPageState extends ConsumerState<PeopleCollectionPage> {
                           child: Material(
                             shape: const CircleBorder(side: BorderSide.none),
                             elevation: 3,
-                            child: CircleAvatar(
-                              key: ValueKey(person.id),
-                              maxRadius: isTablet ? 100 / 2 : 96 / 2,
-                              backgroundImage: RemoteImageProvider(
-                                url: getFaceThumbnailUrl(person.id, updatedAt: person.updatedAt),
-                              ),
+                            child: Stack(
+                              children: [
+                                CircleAvatar(
+                                  key: ValueKey(person.id),
+                                  maxRadius: isTablet ? 100 / 2 : 96 / 2,
+                                  backgroundImage: RemoteImageProvider(
+                                    url: getFaceThumbnailUrl(person.id, updatedAt: person.updatedAt),
+                                  ),
+                                ),
+                                if (person.isHidden)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: context.colorScheme.surfaceContainer,
+                                      child: Icon(
+                                        Icons.visibility_off,
+                                        size: 16,
+                                        color: context.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),

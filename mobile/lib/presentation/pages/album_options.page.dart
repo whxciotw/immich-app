@@ -241,6 +241,13 @@ class AlbumOptionsPage extends HookConsumerWidget {
                 title: Text(context.t.invite_people),
                 onTap: () async => addUsers(),
               ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('选择封面照片'),
+                onTap: () async {
+                  await context.pushRoute<bool>(AlbumCoverPickerRoute(album: album));
+                },
+              ),
               const Divider(indent: 16),
             ],
             buildOwnerInfo(),

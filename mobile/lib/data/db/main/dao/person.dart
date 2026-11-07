@@ -40,7 +40,7 @@ class PeopleDatabaseRepository extends DatabaseAccessor<Drift> with $PeopleDatab
   /// All known people with a known associated face and asset
   ///
   /// If [minFaces] is provided (defaults to 3), restrict to people having at least that many unique face entries
-  Stream<List<Person>> watchAll({int minFaces = 3}) {
+  Stream<List<Person>> watchAll({int minFaces = 3, bool includeHidden = false}) {
     final people = _db.personEntity;
     final faces = _db.assetFaceEntity;
     final assets = _db.remoteAssetEntity;
@@ -51,7 +51,7 @@ class PeopleDatabaseRepository extends DatabaseAccessor<Drift> with $PeopleDatab
             innerJoin(assets, assets.id.equalsExp(faces.assetId)),
           ])
           ..where(
-            people.isHidden.equals(false) &
+            (includeHidden ? const Constant(true) : people.isHidden.equals(false)) &
                 assets.deletedAt.isNull() &
                 assets.visibility.equalsValue(AssetVisibility.timeline) &
                 faces.isVisible.equals(true) &
@@ -80,8 +80,21 @@ class PeopleDatabaseRepository extends DatabaseAccessor<Drift> with $PeopleDatab
 
     return query.write(PersonEntityCompanion(birthDate: Value(birthday), updatedAt: Value(DateTime.now())));
   }
+
+  Future<int> updateHidden(String personId, bool isHidden) {
+    final query = _db.update(_db.personEntity)..where((row) => row.id.equals(personId));
+
+    return query.write(PersonEntityCompanion(isHidden: Value(isHidden), updatedAt: Value(DateTime.now())));
+  }
+
+  Future<int> updateFeatureFaceAsset(String personId, String assetId) {
+    final query = _db.update(_db.personEntity)..where((row) => row.id.equals(personId));
+
+    return query.write(PersonEntityCompanion(faceAssetId: Value(assetId), updatedAt: Value(DateTime.now())));
+  }
 }
 
 extension on PersonEntityData {
-  Person toDto() => Person(id: id, updatedAt: updatedAt, name: name, birthDate: birthDate);
+  Person toDto() =>
+      Person(id: id, updatedAt: updatedAt, name: name, birthDate: birthDate, isHidden: isHidden);
 }
