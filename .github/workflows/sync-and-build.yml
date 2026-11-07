@@ -50,6 +50,8 @@ jobs:
         run: |
           git config user.name "yunshang-bot"
           git config user.email "yunshang-bot@users.noreply.github.com"
+          # README.md is fork-specific: keep our version if upstream also edits it.
+          git config merge.ours.driver true
 
       - name: Resolve upstream version
         id: version
