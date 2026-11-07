@@ -22,6 +22,14 @@
 | 包名 | `app.alextran.immich` | `app.alextran.immich.yunshang`（可与官方共存） |
 | 桌面名称 | `Immich` | `Immich`（同名，按包名区分） |
 
+## 截图
+
+<p align="center">
+  <img src="docs/images/places-tree.jpg" width="360" alt="Places 三级折叠">
+</p>
+
+<p align="center"><em>地点页：国家 → 省 → 市三级折叠，默认展开国家，可全部展开/折叠、搜索，按名称排序。</em></p>
+
 ## 下载与安装
 
 - 最新版本：<https://github.com/whxciotw/immich-app/releases/latest>
@@ -54,6 +62,14 @@
 
 细节见 [YUNSHANG.md](YUNSHANG.md)。如果 fork 的定时任务没有触发（GitHub 对 fork 的 schedule 默认可能关闭），
 到 `Actions → Sync upstream and build APK → Run workflow` 手动运行一次即可。
+
+## 相关项目
+
+| 项目 | 作用 |
+| --- | --- |
+| **本仓库** `immich-app` | 非官方 Android 构建（APK） |
+| [whxciotw/immich-amap](https://github.com/whxciotw/immich-amap) | 高德底图样式、GCJ-02 纠偏、中文地名库、通用 Docker 部署 |
+| [whxciotw/immich](https://github.com/whxciotw/immich) | 两个项目的门户/文档索引与版本兼容说明 |
 
 ## 许可与声明
 
