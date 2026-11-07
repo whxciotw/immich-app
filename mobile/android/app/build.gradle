@@ -55,6 +55,13 @@ android {
       keyPassword keyPasswordVal ?: keystoreProperties['keyPassword']
       storeFile file("../key.jks").exists() ? file("../key.jks") : file(keystoreProperties['storeFile'] ?: '../key.jks')
       storePassword storePasswordVal ?: keystoreProperties['storePassword']
+
+      // Some OEM package installers (notably MIUI/HyperOS) fail to parse APKs
+      // that only carry a v2 signature ("PackageInfo is null"). Sign with
+      // v1 + v2 + v3 for maximum compatibility.
+      enableV1Signing true
+      enableV2Signing true
+      enableV3Signing true
     }
   }
 
