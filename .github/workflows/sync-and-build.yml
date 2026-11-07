@@ -151,6 +151,21 @@ jobs:
           large-packages: false
           swap-storage: false
 
+      - name: Cache Gradle, pub and Rust
+        if: steps.version.outputs.should_run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.pub-cache
+            ~/.cargo/registry
+            ~/.cargo/git
+            mobile/android/.gradle
+          key: yunshang-build-${{ hashFiles('mobile/pubspec.lock', 'mobile/pubspec.yaml', 'mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            yunshang-build-
+
       - name: Setup mise (root)
         if: steps.version.outputs.should_run == 'true'
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
