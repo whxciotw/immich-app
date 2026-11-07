@@ -65,6 +65,11 @@ android {
     }
 
     release {
+      // Unofficial "yunshang" build: distinct applicationId so it can coexist
+      // with the official Immich app, and a distinguishable launcher name.
+      applicationIdSuffix ".yunshang"
+      resValue "string", "app_name", "Immich Yunshang"
+
       def hasKeystore = file("../key.jks").exists() && file("../key.jks").length() > 0
       signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -108,6 +113,7 @@ dependencies {
   //Glance Widget
   implementation libs.glance.appwidget
   implementation libs.gson
+  implementation "androidx.core:core-ktx:1.13.1"
 
   // Glance Configure
   implementation libs.activity.compose

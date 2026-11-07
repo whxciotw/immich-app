@@ -42,6 +42,7 @@ import 'package:immich_mobile/utils/cache/widgets_binding.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/utils/licenses.dart';
 import 'package:immich_mobile/utils/migration.dart';
+import 'package:immich_mobile/yunshang/updater/yunshang_updater.dart';
 import 'package:immich_mobile/wm_executor.dart';
 import 'package:immich_ui/immich_ui.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -248,6 +249,10 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
               ),
         );
       }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(YunshangUpdater.maybeCheckOnLaunch(context));
     });
 
     ref.read(viewIntentHandlerProvider).init();

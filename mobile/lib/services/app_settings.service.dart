@@ -5,7 +5,12 @@ enum AppSettingsEnum<T> {
   advancedTroubleshooting<bool>(StoreKey.advancedTroubleshooting, false),
   manageLocalMediaAndroid<bool>(StoreKey.manageLocalMediaAndroid, false),
   enableHapticFeedback<bool>(StoreKey.enableHapticFeedback, true),
-  readonlyModeEnabled<bool>(StoreKey.readonlyModeEnabled, false);
+  readonlyModeEnabled<bool>(StoreKey.readonlyModeEnabled, false),
+
+  // yunshang updater (unofficial build)
+  yunshangCheckUpdates<bool>(StoreKey.yunshangCheckUpdates, true),
+  yunshangAutoDownload<bool>(StoreKey.yunshangAutoDownload, false);
+
 
   const AppSettingsEnum(this.storeKey, this.defaultValue);
 

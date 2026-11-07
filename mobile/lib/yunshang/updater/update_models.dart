@@ -1,0 +1,74 @@
+class YunshangReleaseAsset {
+  const YunshangReleaseAsset({required this.url, required this.sha256});
+
+  final String url;
+  final String sha256;
+
+  static YunshangReleaseAsset? fromJson(Object? json) {
+    if (json is! Map) {
+      return null;
+    }
+    final url = json['url']?.toString();
+    final sha256 = json['sha256']?.toString().toLowerCase();
+    if (url == null || sha256 == null || url.isEmpty || sha256.isEmpty) {
+      return null;
+    }
+    return YunshangReleaseAsset(url: url, sha256: sha256);
+  }
+}
+
+class YunshangRelease {
+  const YunshangRelease({
+    required this.versionName,
+    required this.versionCode,
+    required this.tag,
+    required this.notesUrl,
+    required this.assets,
+  });
+
+  final String versionName;
+  final int versionCode;
+  final String tag;
+  final String notesUrl;
+  final Map<String, YunshangReleaseAsset> assets;
+
+  static YunshangRelease? fromJson(Object? json) {
+    if (json is! Map) {
+      return null;
+    }
+
+    final versionCode = int.tryParse(json['versionCode']?.toString() ?? '');
+    final tag = json['tag']?.toString();
+    if (versionCode == null || tag == null || tag.isEmpty) {
+      return null;
+    }
+
+    final assets = <String, YunshangReleaseAsset>{};
+    final rawAssets = json['assets'];
+    if (rawAssets is Map) {
+      for (final entry in rawAssets.entries) {
+        final asset = YunshangReleaseAsset.fromJson(entry.value);
+        if (asset != null) {
+          assets[entry.key.toString()] = asset;
+        }
+      }
+    }
+
+    return YunshangRelease(
+      versionName: json['versionName']?.toString() ?? tag,
+      versionCode: versionCode,
+      tag: tag,
+      notesUrl: json['notesUrl']?.toString() ?? '',
+      assets: assets,
+    );
+  }
+
+  /// Picks the APK matching the device's primary ABI, falling back to the
+  /// universal build.
+  YunshangReleaseAsset? assetForAbi(String? abi) {
+    if (abi != null && assets.containsKey(abi)) {
+      return assets[abi];
+    }
+    return assets['universal'] ?? assets['arm64-v8a'];
+  }
+}

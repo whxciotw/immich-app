@@ -1,0 +1,321 @@
+name: Sync upstream and build APK
+
+on:
+  schedule:
+    # Daily at 03:17 UTC (11:17 Asia/Singapore)
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Upstream tag to build (e.g. v3.3.6). Empty = latest stable.'
+        required: false
+        type: string
+      force:
+        description: 'Build even if a yunshang release already exists for this upstream version'
+        required: false
+        type: boolean
+        default: false
+      skip_debounce:
+        description: 'Skip the 12h debounce after an upstream release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: yunshang-sync-build
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: immich-app/immich
+  DEBOUNCE_SECONDS: '43200'
+
+jobs:
+  sync-build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git
+        run: |
+          git config user.name "yunshang-bot"
+          git config user.email "yunshang-bot@users.noreply.github.com"
+
+      - name: Resolve upstream version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          FORCE: ${{ inputs.force }}
+          SKIP_DEBOUNCE: ${{ inputs.skip_debounce }}
+        run: |
+          set -euo pipefail
+          upstream="$UPSTREAM"
+          if [ -n "${INPUT_VERSION:-}" ]; then
+            ver="v${INPUT_VERSION#v}"
+          else
+            tags=$(git ls-remote --tags --refs "https://github.com/${upstream}.git" 'refs/tags/v*' | awk '{print $2}' | sed 's#refs/tags/##' || true)
+            ver=$(printf '%s\n' "$tags" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          fi
+          if [ -z "${ver:-}" ]; then
+            echo "No stable upstream tag found" >&2
+            exit 1
+          fi
+          base="${ver#v}"
+          echo "upstream version: ${ver}"
+
+          # Only build versions that are actually published as a GitHub release.
+          if ! gh release view "$ver" --repo "$upstream" --json tagName >/dev/null 2>&1; then
+            echo "Upstream release ${ver} not published yet; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Debounce: ignore very fresh releases (temporary tag / hotfix in flight).
+          git fetch -q --depth=1 "https://github.com/${upstream}.git" "refs/tags/${ver}"
+          tag_ts=$(git log -1 --format=%ct FETCH_HEAD)
+          now=$(date +%s)
+          age=$((now - tag_ts))
+          if [ "${SKIP_DEBOUNCE:-false}" != "true" ] && [ "$age" -lt "${DEBOUNCE_SECONDS}" ]; then
+            echo "Upstream release ${ver} is only ${age}s old; waiting for the next run."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Idempotency: if we already published vX.Y.Z-yunshang.N, stop.
+          existing=$(git ls-remote --tags --refs origin "refs/tags/${ver}-yunshang.*" | awk '{print $2}' | sed 's#refs/tags/##' || true)
+          max_index=0
+          if [ -n "${existing:-}" ]; then
+            for t in $existing; do
+              idx="${t##*.}"
+              case "$idx" in (*[!0-9]*) continue;; esac
+              [ "$idx" -gt "$max_index" ] && max_index="$idx"
+            done
+          fi
+          if [ "$max_index" -gt 0 ] && [ "${FORCE:-false}" != "true" ]; then
+            echo "v${base}-yunshang.${max_index} already exists; nothing to do."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          index=$((max_index + 1))
+
+          IFS=. read -r major minor patch <<< "$base"
+          base_code=$((major * 1000000 + minor * 10000 + patch * 100 + 99))
+          version_code=$((base_code * 100 + index))
+          build_name="${base}-yunshang.${index}"
+          build_tag="v${build_name}"
+
+          {
+            echo "should_run=true"
+            echo "upstream_tag=${ver}"
+            echo "version_name=${build_name}"
+            echo "build_tag=${build_tag}"
+            echo "version_code=${version_code}"
+          } >> "$GITHUB_OUTPUT"
+          echo "building ${build_tag} (versionCode ${version_code})"
+
+      - name: Merge upstream release
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          UPSTREAM_TAG: ${{ steps.version.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          git fetch -q "https://github.com/${UPSTREAM}.git" "refs/tags/${UPSTREAM_TAG}"
+          if ! git merge --no-edit FETCH_HEAD; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "Upstream merge conflict for ${UPSTREAM_TAG}" \
+              --body "Automatic merge of upstream ${UPSTREAM_TAG} failed. Resolve the conflict on main manually (keep the yunshang changes), then re-run the workflow." || true
+            exit 1
+          fi
+
+      - name: Push synced main
+        if: steps.version.outputs.should_run == 'true'
+        run: git push origin HEAD:main
+
+      - name: Free disk space
+        if: steps.version.outputs.should_run == 'true'
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: false
+
+      - name: Setup mise (root)
+        if: steps.version.outputs.should_run == 'true'
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
+        with:
+          version: 2026.10.5
+          install: true
+          install_args: "--locked"
+          cache: true
+          working_directory: .
+
+      - name: Setup mise (mobile)
+        if: steps.version.outputs.should_run == 'true'
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
+        with:
+          version: 2026.10.5
+          install: true
+          install_args: "--locked"
+          cache: true
+          working_directory: ./mobile
+
+      - name: Setup Android SDK
+        if: steps.version.outputs.should_run == 'true'
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+
+      - name: Install JS dependencies (codegen)
+        if: steps.version.outputs.should_run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Flutter dependencies
+        if: steps.version.outputs.should_run == 'true'
+        run: mise //mobile:install:ci
+
+      - name: Generate Dart/SDK code
+        if: steps.version.outputs.should_run == 'true'
+        run: mise //mobile:codegen
+
+      - name: Decode signing keystore
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_KEYSTORE_B64:-}" || { echo "ANDROID_KEYSTORE_B64 secret is missing" >&2; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 -d > mobile/android/key.jks
+          test -s mobile/android/key.jks || { echo "keystore decode failed" >&2; exit 1; }
+
+      - name: Build APKs
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          flutter build apk --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64,android-x64 \
+            --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+      - name: Collect and verify APK artifacts
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          out=mobile/build/app/outputs/flutter-apk
+          cp "$out/app-release.apk" "dist/Immich-${BUILD_TAG}-universal.apk"
+          cp "$out/app-arm64-v8a-release.apk" "dist/Immich-${BUILD_TAG}-arm64-v8a.apk"
+          cp "$out/app-armeabi-v7a-release.apk" "dist/Immich-${BUILD_TAG}-armeabi-v7a.apk"
+          cp "$out/app-x86_64-release.apk" "dist/Immich-${BUILD_TAG}-x86_64.apk"
+
+          build_tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          apksigner="$build_tools/apksigner"
+          aapt2="$build_tools/aapt2"
+
+          expected=$(tr -d '[:space:]' < yunshang/SIGNING_CERT_SHA256.txt)
+          for apk in dist/*.apk; do
+            cert=$("$apksigner" verify --print-certs "$apk" | grep -i 'SHA-256 digest' | head -1 | sed 's/.*digest: *//' | tr -d '[:space:]')
+            [ "$cert" = "$expected" ] || { echo "signature mismatch for $apk: $cert" >&2; exit 1; }
+          done
+
+          badging=$("$aapt2" dump badging "dist/Immich-${BUILD_TAG}-universal.apk" | head -1)
+          echo "$badging"
+          echo "$badging" | grep -q "package: name='app.alextran.immich.yunshang'" || { echo "unexpected package name" >&2; exit 1; }
+          echo "$badging" | grep -q "versionCode='${BUILD_NUMBER}'" || { echo "unexpected versionCode" >&2; exit 1; }
+
+      - name: Generate latest.json and checksums
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+          UPSTREAM_TAG: ${{ steps.version.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, hashlib, json, os
+
+          tag = os.environ["BUILD_TAG"]
+          name = os.environ["BUILD_NAME"]
+          code = int(os.environ["BUILD_NUMBER"])
+          repo = os.environ["GITHUB_REPOSITORY"]
+          assets = {}
+          checksums = []
+          for path in sorted(glob.glob("dist/*.apk")):
+              filename = os.path.basename(path)
+              suffix = filename[:-4].replace(f"Immich-{tag}-", "")
+              digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+              checksums.append(f"{digest}  {filename}")
+              assets[suffix] = {
+                  "url": f"https://github.com/{repo}/releases/download/{tag}/{filename}",
+                  "sha256": digest,
+              }
+          payload = {
+              "versionName": name,
+              "versionCode": code,
+              "tag": tag,
+              "publishedAt": None,
+              "notesUrl": f"https://github.com/{repo}/releases/tag/{tag}",
+              "upstreamTag": os.environ["UPSTREAM_TAG"],
+              "assets": assets,
+          }
+          json.dump(payload, open("dist/latest.json", "w"), indent=2, ensure_ascii=False)
+          open("dist/sha256sums.txt", "w").write("\n".join(checksums) + "\n")
+          PY
+          cat dist/latest.json
+
+      - name: Create GitHub release
+        if: steps.version.outputs.should_run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          UPSTREAM_TAG: ${{ steps.version.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$BUILD_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $BUILD_TAG already exists"
+            exit 0
+          fi
+          fingerprint=$(tr -d '[:space:]' < yunshang/SIGNING_CERT_SHA256.txt)
+          cat > release-notes.md <<NOTES
+          Unofficial **yunshang** Android build of Immich ${UPSTREAM_TAG}.
+
+          - Based on upstream ${UPSTREAM_TAG}: https://github.com/immich-app/immich/releases/tag/${UPSTREAM_TAG}
+          - yunshang changes: Places map initial location fix (device location instead of hard-coded Honolulu / 0,0), separate application id \`app.alextran.immich.yunshang\`, in-app update check + download from this repository.
+          - This APK is **not** published by the Immich project. Source: https://github.com/${GITHUB_REPOSITORY}
+
+          Signing certificate SHA-256: \`${fingerprint}\`
+
+          Install: allow "install unknown apps" for your browser/Obtainium, then install. Official Immich can stay installed (different package id).
+          NOTES
+          gh release create "$BUILD_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Immich ${UPSTREAM_TAG} (yunshang build)" \
+            --notes-file release-notes.md \
+            --latest \
+            dist/*.apk dist/latest.json dist/sha256sums.txt
+
+      - name: Upload build artifacts (backup)
+        if: steps.version.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ steps.version.outputs.build_tag }}
+          path: dist/
+          retention-days: 7

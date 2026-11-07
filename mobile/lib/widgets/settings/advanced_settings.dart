@@ -36,6 +36,8 @@ class AdvancedSettings extends HookConsumerWidget {
       (_, _) => unawaited(ref.read(settingsProvider).write(.imagePreferRemote, preferRemote.value)),
     );
     final readonlyModeEnabled = useAppSettingsState(AppSettingsEnum.readonlyModeEnabled);
+    final yunshangCheckUpdates = useAppSettingsState(AppSettingsEnum.yunshangCheckUpdates);
+    final yunshangAutoDownload = useAppSettingsState(AppSettingsEnum.yunshangAutoDownload);
 
     final logLevel = Level.LEVELS[levelId.value].name;
 
@@ -113,6 +115,18 @@ class AdvancedSettings extends HookConsumerWidget {
         valueNotifier: preferRemote,
         title: context.t.advanced_settings_prefer_remote_title,
         subtitle: context.t.advanced_settings_prefer_remote_subtitle,
+      ),
+      SettingsSwitchListTile(
+        enabled: true,
+        valueNotifier: yunshangCheckUpdates,
+        title: '启动时检查更新',
+        subtitle: '检查 GitHub 上 yunshang 版本的新安装包',
+      ),
+      SettingsSwitchListTile(
+        enabled: true,
+        valueNotifier: yunshangAutoDownload,
+        title: '自动下载更新包',
+        subtitle: '发现新版本后自动下载；安装仍需在系统界面确认',
       ),
       const CustomProxyHeaderSettings(),
       const SslClientCertSettings(),
