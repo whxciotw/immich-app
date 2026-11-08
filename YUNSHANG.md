@@ -22,11 +22,18 @@ that publishes an unofficial Android build for personal use.
    (features that used to be web-only).
 5. **Album cover** — choose any photo in an album as its cover from
    *Album → Options → 选择封面照片*.
-6. **In-app updates from this repository** — the app checks
+6. **Timeline grouping** — 年 / 月 / 日 segmented control on the Photos page
+   and in Settings → Photo Grid → Group by (both write the same setting).
+7. **Adaptive grid** — on by default: 9/5/3 columns for year/month/day at
+   390dp, scaling with screen width (foldables get more columns, no cap).
+   With adaptive mode, pinch cycles 年 ↔ 月 ↔ 日; with it off, pinch changes
+   the 2–6 column count as before.
+8. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.
    Settings under *Settings → Advanced*:
-   - `启动时检查更新` (check on launch, default **on**)
+   - `启动时检查更新` (check on every cold start and after >30 min in background,
+  default **on**)
    - `自动下载更新包` (auto download, default **off**)
    - `立即检查更新` (manual check; bypasses the switch/throttle/ignored version)
 
@@ -48,7 +55,7 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current build: **v3.3.6-yunshang.5** (upstream `v3.3.6`).
+Current build: **v3.3.6-yunshang.6** (upstream `v3.3.6`).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:
