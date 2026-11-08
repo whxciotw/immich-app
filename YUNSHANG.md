@@ -57,8 +57,8 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current stable build: **v3.3.6-yunshang.8** (upstream `v3.3.6`).
-Test channel build: **v3.3.6-yunshang-test.4** (GitHub Pre-release, not served to stable users).
+Current stable build: **v3.3.6-yunshang.9** (upstream `v3.3.6`).
+Test channel build: **v3.3.6-yunshang-test.5** (GitHub Pre-release, not served to stable users).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:
