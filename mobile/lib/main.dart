@@ -50,22 +50,18 @@ import 'package:logging/logging.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:timezone/data/latest.dart';
 
-/// Root navigator key, used by context-free startup checks (update dialog).
-final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
-
-/// Fallback for router-based MaterialApp configurations where the
-/// [rootNavigatorKey] is not attached to the actual root navigator.
+/// Captures the root Navigator for context-free startup update checks.
 class RootNavigatorCapture extends NavigatorObserver {
-  static NavigatorState? navigator;
+  static NavigatorState? captured;
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    navigator ??= route.navigator;
+    captured ??= route.navigator;
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    navigator ??= newRoute?.navigator;
+    captured ??= newRoute?.navigator;
   }
 }
 
@@ -159,17 +155,23 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
   DateTime? _pausedAt;
 
   void _scheduleLaunchUpdateCheck() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-      final navContext = rootNavigatorKey.currentContext ?? RootNavigatorCapture.navigator?.context;
-      if (navContext == null) {
-        dPrint(() => 'Update check skipped: navigator is not ready');
-        return;
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runLaunchUpdateCheck(0));
+  }
+
+  void _runLaunchUpdateCheck(int attempt) {
+    if (!mounted) {
+      return;
+    }
+    final navContext = RootNavigatorCapture.captured?.context;
+    if (navContext != null) {
       unawaited(YunshangUpdater.maybeCheckOnLaunch(navContext));
-    });
+      return;
+    }
+    if (attempt >= 3) {
+      dPrint(() => 'Update check skipped: navigator is not ready');
+      return;
+    }
+    Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)), () => _runLaunchUpdateCheck(attempt + 1));
   }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -321,7 +323,6 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       child: MaterialApp.router(
         title: 'Immich',
         debugShowCheckedModeBanner: true,
-        navigatorKey: rootNavigatorKey,
         scaffoldMessengerKey: scaffoldMessengerKey,
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
