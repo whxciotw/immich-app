@@ -17,11 +17,10 @@ that publishes an unofficial Android build for personal use.
    country → province → city tree (countries expanded by default), with
    asset counts, name sorting, a search box that flattens the results and an
    expand/collapse-all button in the app bar.
-4. **People management** — set a person's feature photo (avatar), merge up to
-   five people, hide/show a person, and show hidden people from the People page
-   (features that used to be web-only).
-5. **Album cover** — choose any photo in an album as its cover from
-   *Album → Options → 选择封面照片*.
+4. **People management** — merge up to five people, hide/show a person, show
+   hidden people, multi-select people and bulk hide/show, plus quick actions
+   for hiding all/unnamed people (the album cover picker was removed because
+   the existing "set as album cover" action already covers that).
 6. **Timeline grouping** — 年 / 月 / 日 segmented control on the Photos page
    and in Settings → Photo Grid → Group by (both write the same setting).
 7. **Adaptive grid** — on by default: 9/5/3 columns for year/month/day at
@@ -59,7 +58,7 @@ published as `vX.Y.Z-yunshang.N`:
 <https://github.com/whxciotw/immich-app/releases>
 
 Current stable build: **v3.3.6-yunshang.8** (upstream `v3.3.6`).
-Test channel build: **v3.3.6-yunshang-test.1** (GitHub Pre-release, not served to stable users).
+Test channel build: **v3.3.6-yunshang-test.4** (GitHub Pre-release, not served to stable users).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:
