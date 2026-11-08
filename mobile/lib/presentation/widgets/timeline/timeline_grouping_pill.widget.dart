@@ -20,9 +20,9 @@ class TimelineGroupingPill extends ConsumerWidget {
     final selected = _options.indexOf(normalized);
     final colorScheme = Theme.of(context).colorScheme;
 
-    final background = colorScheme.surfaceContainerHigh.withValues(alpha: isScrolling ? 0.72 : 0.40);
-    final selectedColor = colorScheme.surface.withValues(alpha: isScrolling ? 0.92 : 0.68);
-    final borderColor = colorScheme.onSurface.withValues(alpha: isScrolling ? 0.16 : 0.10);
+    final background = colorScheme.surfaceContainerHigh.withValues(alpha: isScrolling ? 0.16 : 0.40);
+    final selectedColor = colorScheme.surface.withValues(alpha: isScrolling ? 0.38 : 0.68);
+    final borderColor = colorScheme.onSurface.withValues(alpha: isScrolling ? 0.06 : 0.10);
 
     return SizedBox(
       width: 190,
@@ -59,7 +59,7 @@ class TimelineGroupingPill extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: isScrolling ? 0.20 : 0.12),
+                              color: Colors.black.withValues(alpha: isScrolling ? 0.08 : 0.12),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -81,8 +81,8 @@ class TimelineGroupingPill extends ConsumerWidget {
                                     fontSize: 12.5,
                                     fontWeight: option == groupBy ? FontWeight.w600 : FontWeight.w400,
                                     color: option == groupBy
-                                        ? colorScheme.onSurface
-                                        : colorScheme.onSurfaceVariant.withValues(alpha: isScrolling ? 1 : 0.9),
+                                        ? colorScheme.onSurface.withValues(alpha: isScrolling ? 0.62 : 1)
+                                        : colorScheme.onSurfaceVariant.withValues(alpha: isScrolling ? 0.50 : 0.9),
                                   ),
                                   child: Text(switch (option) {
                                     GroupAssetsBy.year => '年',

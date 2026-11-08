@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -25,6 +26,7 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> with Widget
   _UpdatePhase _phase = _UpdatePhase.prompt;
   double _progress = 0;
   String _message = '';
+  String _currentVersion = '';
   File? _apk;
   bool _canInstall = true;
 
@@ -32,12 +34,20 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    unawaited(_loadCurrentVersion());
     if (widget.autoDownload) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           unawaited(_downloadAndInstall());
         }
       });
+    }
+  }
+
+  Future<void> _loadCurrentVersion() async {
+    final version = await YunshangUpdateService.currentVersionName();
+    if (mounted) {
+      setState(() => _currentVersion = version);
     }
   }
 
@@ -176,57 +186,145 @@ class _YunshangUpdateDialogState extends State<YunshangUpdateDialog> with Widget
   Widget build(BuildContext context) {
     final release = widget.release;
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDownloading = _phase == _UpdatePhase.downloading;
+    final isReady = _phase == _UpdatePhase.ready;
+    final canRetry = _phase == _UpdatePhase.prompt || _phase == _UpdatePhase.error;
 
-    return AlertDialog(
-      title: const Text('发现新版本'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('新版本：${release.versionName}', style: theme.textTheme.bodyMedium),
-            if (_message.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(_message, style: theme.textTheme.bodySmall),
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+      clipBehavior: Clip.antiAlias,
+      backgroundColor: colorScheme.surface,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '发现新版本',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (!isDownloading)
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      tooltip: '关闭',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '新版本',
+                      style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      release.versionName,
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '当前版本 ${_currentVersion.isEmpty ? '…' : _currentVersion}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              if (_message.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: _phase == _UpdatePhase.error ? colorScheme.error : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              if (isDownloading) ...[
+                const SizedBox(height: 16),
+                LinearProgressIndicator(value: _progress > 0 ? _progress : null),
+                const SizedBox(height: 8),
+                Text(
+                  _progress > 0 ? '${(_progress * 100).toStringAsFixed(0)}%' : '准备下载…',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                ),
+              ] else if (canRetry) ...[
+                const SizedBox(height: 18),
+                FilledButton(
+                  onPressed: _downloadAndInstall,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: Text(_phase == _UpdatePhase.error ? '重试更新' : '立即更新'),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('以后再说'),
+                      ),
+                    ),
+                    Container(width: 1, height: 14, color: colorScheme.outlineVariant),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          unawaited(Store.put(StoreKey.yunshangIgnoredVersion, release.tag));
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('忽略此版本'),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (isReady) ...[
+                const SizedBox(height: 18),
+                FilledButton(
+                  onPressed: _canInstall ? _install : _openInstallSettings,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: Text(_canInstall ? '继续安装' : '去允许安装'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('以后再说'),
+                ),
+              ],
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: release.notesUrl.isEmpty
+                    ? null
+                    : () => launchUrlString(release.notesUrl, mode: LaunchMode.externalApplication),
+                child: const Text('更新说明'),
+              ),
             ],
-            if (_phase == _UpdatePhase.downloading) ...[
-              const SizedBox(height: 12),
-              LinearProgressIndicator(value: _progress > 0 ? _progress : null),
-            ],
-          ],
+          ),
         ),
       ),
-      actions: [
-        if (_phase != _UpdatePhase.downloading) ...[
-          TextButton(
-            onPressed: () {
-              unawaited(Store.put(StoreKey.yunshangIgnoredVersion, release.tag));
-              Navigator.of(context).pop();
-            },
-            child: const Text('忽略此版本'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('以后再说'),
-          ),
-          if (_phase == _UpdatePhase.prompt || _phase == _UpdatePhase.error)
-            FilledButton(
-              onPressed: _downloadAndInstall,
-              child: const Text('立即更新'),
-            ),
-          if (_phase == _UpdatePhase.ready)
-            FilledButton(
-              onPressed: _canInstall ? _install : _openInstallSettings,
-              child: Text(_canInstall ? '继续安装' : '去允许安装'),
-            ),
-        ],
-        TextButton(
-          onPressed: release.notesUrl.isEmpty
-              ? null
-              : () => launchUrlString(release.notesUrl, mode: LaunchMode.externalApplication),
-          child: const Text('更新说明'),
-        ),
-      ],
     );
   }
 
