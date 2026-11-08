@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:immich_mobile/data/db/main/dao/person.drift.dart';
 import 'package:immich_mobile/data/db/main/database.dart';
+import 'package:immich_mobile/data/db/main/table/people/asset_face.drift.dart';
 import 'package:immich_mobile/data/db/main/table/people/person.drift.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/person.model.dart';
@@ -103,6 +104,12 @@ class PeopleDatabaseRepository extends DatabaseAccessor<Drift> with $PeopleDatab
 
       final ids = removedIds.where((id) => id != merged.id).toList(growable: false);
       if (ids.isNotEmpty) {
+        // Merge is only applied locally after the server confirms it. Reassign
+        // the source people's faces to the target so the target's photo
+        // timeline is complete immediately, without waiting for a remote sync.
+        await (_db.update(_db.assetFaceEntity)..where((row) => row.personId.isIn(ids))).write(
+          AssetFaceEntityCompanion(personId: Value(merged.id)),
+        );
         await (_db.delete(_db.personEntity)..where((row) => row.id.isIn(ids))).go();
       }
     });
