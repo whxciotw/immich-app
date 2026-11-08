@@ -5,10 +5,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/constants/enums.dart';
 import 'package:immich_mobile/domain/models/album/album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
-import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/widgets/common/immich_toast.dart';
 
 @RoutePage()
@@ -50,8 +48,13 @@ class AlbumCoverPickerPage extends HookConsumerWidget {
   }
 
   Future<List<BaseAsset>> _loadAssets(WidgetRef ref) async {
-    final query = ref.read(driftProvider).timelineRepository.remoteAlbum(album.id, GroupAssetsBy.day);
-    return query.assetSource(0, 100);
+    // Read the album assets from the local DB directly. The timeline bucket
+    // query can be stale/empty while album sync is still catching up, which
+    // made the picker look broken for some libraries.
+    final assets = await ref.read(remoteAlbumServiceProvider).getAssets(album.id);
+    final sorted = List<BaseAsset>.from(assets)
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted.take(200).toList();
   }
 
   Future<void> _select(BuildContext context, WidgetRef ref, BaseAsset asset) async {
