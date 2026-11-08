@@ -29,8 +29,8 @@ that publishes an unofficial Android build for personal use.
    With adaptive mode, pinch cycles 年 ↔ 月 ↔ 日; with it off, pinch changes
    the 2–6 column count as before.
 8. **Grouping pill** — custom 36dp floating capsule above the bottom tabs;
-   translucent (40% / selected 68%), deepens while scrolling (72% / 92%)
-   and restores ~600ms after scrolling stops.
+   translucent (40% / selected 68%), becomes more transparent while
+   scrolling (16% / 38%) and restores ~600ms after scrolling stops.
 9. **In-app updates from this repository** — the app checks
    `releases/latest/download/latest.json`, compares `versionCode`, downloads the
    matching APK (with SHA-256 verification) and opens the system installer.
@@ -58,7 +58,7 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current stable build: **v3.3.6-yunshang.7** (upstream `v3.3.6`).
+Current stable build: **v3.3.6-yunshang.8** (upstream `v3.3.6`).
 Test channel build: **v3.3.6-yunshang-test.1** (GitHub Pre-release, not served to stable users).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
