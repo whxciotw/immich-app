@@ -64,9 +64,15 @@ class Timeline extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final columnCount = ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow));
+    final timelineConfig = ref.watch(appConfigProvider.select((config) => config.timeline));
     return LayoutBuilder(
       builder: (_, constraints) {
+        final explicitGroupBy = groupBy;
+        final effectiveGroupBy = explicitGroupBy ?? timelineConfig.groupAssetsBy;
+        final useAutoColumns = timelineConfig.autoTilesPerRow && explicitGroupBy == null;
+        final columnCount = useAutoColumns
+            ? _adaptiveColumnCount(constraints.maxWidth, effectiveGroupBy)
+            : timelineConfig.tilesPerRow;
         return ProviderScope(
           overrides: [
             // overrideWithValue keeps the scoped args in sync with the latest constraints on rebuilds,
