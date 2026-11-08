@@ -55,13 +55,6 @@ class _PersonPageState extends ConsumerState<PersonPage> {
     }
   }
 
-  Future<void> handleSetFeaturePhoto() async {
-    final updated = await context.pushRoute<Person>(PersonFeaturePhotoRoute(person: _person));
-    if (updated != null && mounted) {
-      setState(() => _person = updated);
-    }
-  }
-
   Future<void> handleMerge() async {
     final merged = await context.pushRoute<Person>(MergePeopleRoute(person: _person));
     if (merged != null && mounted) {
@@ -102,10 +95,6 @@ class _PersonPageState extends ConsumerState<PersonPage> {
           onEditBirthday: () async {
             await handleEditBirthday(context);
             ContextHelper(sheetContext).pop();
-          },
-          onSetFeaturePhoto: () async {
-            ContextHelper(sheetContext).pop();
-            await handleSetFeaturePhoto();
           },
           onMerge: () async {
             ContextHelper(sheetContext).pop();

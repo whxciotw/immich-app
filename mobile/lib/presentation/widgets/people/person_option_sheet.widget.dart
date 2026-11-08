@@ -6,7 +6,6 @@ class PersonOptionSheet extends StatelessWidget {
     super.key,
     this.onEditName,
     this.onEditBirthday,
-    this.onSetFeaturePhoto,
     this.onMerge,
     this.onToggleHidden,
     this.birthdayExists = false,
@@ -15,7 +14,6 @@ class PersonOptionSheet extends StatelessWidget {
 
   final VoidCallback? onEditName;
   final VoidCallback? onEditBirthday;
-  final VoidCallback? onSetFeaturePhoto;
   final VoidCallback? onMerge;
   final VoidCallback? onToggleHidden;
   final bool birthdayExists;
@@ -40,11 +38,6 @@ class PersonOptionSheet extends StatelessWidget {
               leading: const Icon(Icons.cake),
               title: Text(birthdayExists ? context.t.edit_birthday : context.t.add_birthday, style: textStyle),
               onTap: onEditBirthday,
-            ),
-            ListTile(
-              leading: const Icon(Icons.face_retouching_natural),
-              title: Text('选择人物封面', style: textStyle),
-              onTap: onSetFeaturePhoto,
             ),
             ListTile(
               leading: const Icon(Icons.call_merge),

@@ -70,16 +70,13 @@ class PersonMutations extends StoreMutations {
     return person;
   }
 
-  /// Set the asset used as the person's feature photo/thumbnail
-  Future<Person> updateFeaturePhoto(String personId, String assetId) async {
-    final person = await read(personApiRepositoryProvider).update(personId, featureFaceAssetId: assetId);
-    await read(_peopleDb).updateFeatureFaceAsset(personId, assetId);
-    return person;
-  }
-
   /// Merge [personIds] into [targetId] and return the merged person
-  Future<Person?> mergePeople(String targetId, List<String> personIds) {
-    return read(personApiRepositoryProvider).mergePeople(targetId, personIds);
+  Future<Person?> mergePeople(String targetId, List<String> personIds) async {
+    final merged = await read(personApiRepositoryProvider).mergePeople(targetId, personIds);
+    if (merged != null) {
+      await read(_peopleDb).applyMerge(merged, personIds);
+    }
+    return merged;
   }
 
   /// Hide/unhide multiple people through the server bulk endpoint.

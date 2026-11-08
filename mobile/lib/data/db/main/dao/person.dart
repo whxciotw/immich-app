@@ -87,10 +87,25 @@ class PeopleDatabaseRepository extends DatabaseAccessor<Drift> with $PeopleDatab
     return query.write(PersonEntityCompanion(isHidden: Value(isHidden), updatedAt: Value(DateTime.now())));
   }
 
-  Future<int> updateFeatureFaceAsset(String personId, String assetId) {
-    final query = _db.update(_db.personEntity)..where((row) => row.id.equals(personId));
+  /// Apply a successful server-side merge locally so the People list updates
+  /// immediately instead of waiting for the next remote sync.
+  Future<void> applyMerge(Person merged, Iterable<String> removedIds) async {
+    await _db.transaction(() async {
+      final update = _db.update(_db.personEntity)..where((row) => row.id.equals(merged.id));
+      await update.write(
+        PersonEntityCompanion(
+          name: Value(merged.name),
+          birthDate: Value(merged.birthDate),
+          isHidden: Value(merged.isHidden),
+          updatedAt: Value(merged.updatedAt ?? DateTime.now()),
+        ),
+      );
 
-    return query.write(PersonEntityCompanion(faceAssetId: Value(assetId), updatedAt: Value(DateTime.now())));
+      final ids = removedIds.where((id) => id != merged.id).toList(growable: false);
+      if (ids.isNotEmpty) {
+        await (_db.delete(_db.personEntity)..where((row) => row.id.isIn(ids))).go();
+      }
+    });
   }
 }
 

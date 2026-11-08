@@ -37,7 +37,6 @@ import 'package:immich_mobile/pages/settings/sync_status.page.dart';
 import 'package:immich_mobile/pages/share_intent/share_intent.page.dart';
 import 'package:immich_mobile/presentation/pages/activities.page.dart';
 import 'package:immich_mobile/presentation/pages/album.page.dart';
-import 'package:immich_mobile/presentation/pages/album_cover_picker.page.dart';
 import 'package:immich_mobile/presentation/pages/album_options.page.dart';
 import 'package:immich_mobile/presentation/pages/archive.page.dart';
 import 'package:immich_mobile/presentation/pages/asset_selection_timeline.page.dart';
@@ -61,7 +60,6 @@ import 'package:immich_mobile/presentation/pages/partner_detail.page.dart';
 import 'package:immich_mobile/presentation/pages/merge_people.page.dart';
 import 'package:immich_mobile/presentation/pages/people_collection.page.dart';
 import 'package:immich_mobile/presentation/pages/person.page.dart';
-import 'package:immich_mobile/presentation/pages/person_feature_photo.page.dart';
 import 'package:immich_mobile/presentation/pages/place.page.dart';
 import 'package:immich_mobile/presentation/pages/place_detail.page.dart';
 import 'package:immich_mobile/presentation/pages/profile/profile_picture_crop.page.dart';
@@ -185,11 +183,9 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: SyncStatusRoute.page, guards: [_duplicateGuard]),
     AutoRoute(page: PeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: PersonRoute.page, guards: [_authGuard]),
-    AutoRoute(page: PersonFeaturePhotoRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MergePeopleRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: BackupOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AlbumOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: AlbumCoverPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: EditImageRoute.page),
     AutoRoute(page: ActivitiesRoute.page, guards: [_authGuard, _duplicateGuard]),
