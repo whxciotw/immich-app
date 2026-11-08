@@ -6,7 +6,10 @@
 const String kYunshangRepo = 'whxciotw/immich-app';
 const String kYunshangReleaseBase = 'https://github.com/$kYunshangRepo';
 const String kYunshangLatestReleasePage = '$kYunshangReleaseBase/releases/latest';
-const String kYunshangLatestJsonUrl = '$kYunshangReleaseBase/releases/latest/download/latest.json';
+const bool kYunshangTestChannel = bool.fromEnvironment('YUNSHANG_TEST_CHANNEL', defaultValue: false);
+const String kYunshangLatestJsonUrl = kYunshangTestChannel
+    ? '$kYunshangReleaseBase/releases/download/test-latest/latest.json'
+    : '$kYunshangReleaseBase/releases/latest/download/latest.json';
 const String kYunshangUpdateUserAgent = 'Immich-Yunshang-Updater';
 
 const Duration kYunshangHttpTimeout = Duration(seconds: 20);

@@ -50,6 +50,25 @@ import 'package:logging/logging.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:timezone/data/latest.dart';
 
+/// Root navigator key, used by context-free startup checks (update dialog).
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Fallback for router-based MaterialApp configurations where the
+/// [rootNavigatorKey] is not attached to the actual root navigator.
+class RootNavigatorCapture extends NavigatorObserver {
+  static NavigatorState? navigator;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    navigator ??= route.navigator;
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    navigator ??= newRoute?.navigator;
+  }
+}
+
 void main() async {
   try {
     // https://github.com/flutter/flutter/issues/118384
@@ -138,6 +157,20 @@ class ImmichApp extends ConsumerStatefulWidget {
 
 class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserver {
   DateTime? _pausedAt;
+
+  void _scheduleLaunchUpdateCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final navContext = rootNavigatorKey.currentContext ?? RootNavigatorCapture.navigator?.context;
+      if (navContext == null) {
+        dPrint(() => 'Update check skipped: navigator is not ready');
+        return;
+      }
+      unawaited(YunshangUpdater.maybeCheckOnLaunch(navContext));
+    });
+  }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
@@ -148,11 +181,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         final pausedAt = _pausedAt;
         _pausedAt = null;
         if (pausedAt != null && DateTime.now().difference(pausedAt) > const Duration(minutes: 30)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              unawaited(YunshangUpdater.maybeCheckOnLaunch(context));
-            }
-          });
+          _scheduleLaunchUpdateCheck();
         }
       case AppLifecycleState.inactive:
         dPrint(() => "[APP STATE] inactive");
@@ -262,9 +291,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(YunshangUpdater.maybeCheckOnLaunch(context));
-    });
+    _scheduleLaunchUpdateCheck();
 
     ref.read(viewIntentHandlerProvider).init();
     ref.read(shareIntentUploadProvider.notifier).init();
@@ -294,6 +321,7 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       child: MaterialApp.router(
         title: 'Immich',
         debugShowCheckedModeBanner: true,
+        navigatorKey: rootNavigatorKey,
         scaffoldMessengerKey: scaffoldMessengerKey,
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
@@ -311,7 +339,11 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         ),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-          navigatorObservers: () => [AppNavigationObserver(ref: ref), TransitioningRouteObserver()],
+          navigatorObservers: () => [
+            AppNavigationObserver(ref: ref),
+            TransitioningRouteObserver(),
+            RootNavigatorCapture(),
+          ],
         ),
       ),
     );
