@@ -31,6 +31,24 @@ class PersonApiRepository extends ApiRepository {
     return _toPerson(response);
   }
 
+  Future<Set<String>> updateHidden(Iterable<String> ids, bool isHidden) async {
+    if (ids.isEmpty) {
+      return const {};
+    }
+    final dto = PeopleUpdateDto(
+      people: ids
+          .map(
+            (id) => PeopleUpdateItem(
+              id: id,
+              isHidden: Optional.present(isHidden),
+            ),
+          )
+          .toList(),
+    );
+    final results = await checkNull(_api.updatePeople(dto));
+    return results.where((result) => result.success).map((result) => result.id).toSet();
+  }
+
   Future<Person?> mergePeople(String targetId, List<String> otherIds) async {
     final results = await checkNull(_api.mergePeople(MergePersonDto(ids: [targetId, ...otherIds])));
     if (!results.any((result) => result.success)) {

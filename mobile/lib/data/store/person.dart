@@ -81,4 +81,21 @@ class PersonMutations extends StoreMutations {
   Future<Person?> mergePeople(String targetId, List<String> personIds) {
     return read(personApiRepositoryProvider).mergePeople(targetId, personIds);
   }
+
+  /// Hide/unhide multiple people through the server bulk endpoint.
+  /// Returns the number of successfully updated people.
+  Future<int> updateHiddenBulk(Iterable<Person> people, bool isHidden) async {
+    final list = people.toList();
+    if (list.isEmpty) {
+      return 0;
+    }
+    final successIds = await read(personApiRepositoryProvider).updateHidden(
+      list.map((person) => person.id),
+      isHidden,
+    );
+    for (final id in successIds) {
+      await read(_peopleDb).updateHidden(id, isHidden);
+    }
+    return successIds.length;
+  }
 }
