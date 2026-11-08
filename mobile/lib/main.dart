@@ -137,6 +137,7 @@ class ImmichApp extends ConsumerStatefulWidget {
 }
 
 class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserver {
+  DateTime? _pausedAt;
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
@@ -144,11 +145,21 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         dPrint(() => "[APP STATE] resumed");
         unawaited(ref.read(appStateProvider.notifier).handleAppResume());
         unawaited(ref.read(viewIntentHandlerProvider).onAppResumed());
+        final pausedAt = _pausedAt;
+        _pausedAt = null;
+        if (pausedAt != null && DateTime.now().difference(pausedAt) > const Duration(minutes: 30)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              unawaited(YunshangUpdater.maybeCheckOnLaunch(context));
+            }
+          });
+        }
       case AppLifecycleState.inactive:
         dPrint(() => "[APP STATE] inactive");
         ref.read(appStateProvider.notifier).handleAppInactivity();
       case AppLifecycleState.paused:
         dPrint(() => "[APP STATE] paused");
+        _pausedAt = DateTime.now();
         unawaited(ref.read(appStateProvider.notifier).handleAppPause());
       case AppLifecycleState.detached:
         dPrint(() => "[APP STATE] detached");

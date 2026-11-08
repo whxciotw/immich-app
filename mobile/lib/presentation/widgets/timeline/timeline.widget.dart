@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
@@ -321,6 +322,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
 
   @override
   Widget build(BuildContext _) {
+    final groupByArg = ref.watch(timelineArgsProvider.select((args) => args.groupBy));
+    final groupBy = groupByArg ?? ref.watch(appConfigProvider.select((config) => config.timeline.groupAssetsBy));
     final asyncSegments = ref.watch(timelineSegmentProvider);
     final maxHeight = ref.watch(timelineArgsProvider.select((args) => args.maxHeight));
     final isSelectionMode = ref.watch(multiSelectProvider.select((s) => s.forceEnable));
@@ -373,8 +376,13 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                       _restoreAssetIndex = targetAssetIndex;
                     });
                   },
-                  child: TimelineDragSelection(
-                    builder: (physics) {
+                  child: TweenAnimationBuilder<double>(
+                    key: ValueKey(groupBy),
+                    tween: Tween(begin: 0.55, end: 1),
+                    duration: const Duration(milliseconds: 180),
+                    builder: (_, opacity, child) => Opacity(opacity: opacity, child: child),
+                    child: TimelineDragSelection(
+                      builder: (physics) {
                       final grid = CustomScrollView(
                         primary: true,
                         physics: physics,
@@ -416,6 +424,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                           bottomPadding: scrubberBottomPadding,
                           monthSegmentSnappingOffset: widget.topSliverWidgetHeight ?? 0 + appBarExpandedHeight,
                           hasAppBar: widget.appBar != null,
+                          groupBy: groupBy,
                           child: grid,
                         );
                       } else {
@@ -443,6 +452,7 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
                       );
                     },
                   ),
+                ),
                 );
               },
             ),
@@ -451,4 +461,19 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
       ),
     );
   }
+}
+
+
+/// Column counts for the three main grouping dimensions on the Photos page.
+///
+/// Baseline: a 390dp phone shows 9 (year), 5 (month) and 3 (day) columns.
+/// Other widths scale proportionally; the user asked for no upper cap.
+int _adaptiveColumnCount(double width, GroupAssetsBy groupBy) {
+  final base = switch (groupBy) {
+    GroupAssetsBy.year => 9,
+    GroupAssetsBy.month => 5,
+    GroupAssetsBy.day || GroupAssetsBy.auto => 3,
+    GroupAssetsBy.none => 3,
+  };
+  return math.max(2, (width / 390 * base).round());
 }

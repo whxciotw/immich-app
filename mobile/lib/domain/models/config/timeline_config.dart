@@ -8,6 +8,7 @@ part 'timeline_config.freezed.dart';
 abstract class TimelineConfig with _$TimelineConfig {
   const factory TimelineConfig({
     @Default(4) int tilesPerRow,
+    @Default(true) bool autoTilesPerRow,
     @Default(GroupAssetsBy.day) GroupAssetsBy groupAssetsBy,
     @Default(true) bool storageIndicator,
   }) = _TimelineConfig;

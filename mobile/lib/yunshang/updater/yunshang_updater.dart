@@ -17,6 +17,7 @@ enum UpdateCheckStatus { updateAvailable, upToDate, ignored, disabled, throttled
 /// per-version "ignore" record.
 class YunshangUpdater {
   static bool _checking = false;
+  static DateTime? _lastAutoCheckAt;
 
   static bool get isChecking => _checking;
 
@@ -36,10 +37,14 @@ class YunshangUpdater {
 
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       if (!manual) {
-        final lastCheck = Store.tryGet(StoreKey.yunshangLastCheck) ?? 0;
-        if (lastCheck > 0 && now - lastCheck < kYunshangCheckInterval.inSeconds) {
+        // Automatic checks run on every cold start (and on resume after a long
+        // background period). Only de-dupe very rapid repeats from activity
+        // recreation; do not apply the old 24h throttle here.
+        final lastAutoCheck = _lastAutoCheckAt;
+        if (lastAutoCheck != null && DateTime.now().difference(lastAutoCheck) < const Duration(minutes: 2)) {
           return UpdateCheckStatus.throttled;
         }
+        _lastAutoCheckAt = DateTime.now();
       }
 
       final fetched = await YunshangUpdateService.fetchLatest();
