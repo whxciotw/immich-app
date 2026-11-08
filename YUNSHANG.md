@@ -58,7 +58,8 @@ published as `vX.Y.Z-yunshang.N`:
 
 <https://github.com/whxciotw/immich-app/releases>
 
-Current build: **v3.3.6-yunshang.7** (upstream `v3.3.6`).
+Current stable build: **v3.3.6-yunshang.7** (upstream `v3.3.6`).
+Test channel build: **v3.3.6-yunshang-test.1** (GitHub Pre-release, not served to stable users).
 
 If the daily scheduled run does not happen (GitHub disables schedules in forks
 until Actions is enabled for the fork), run it manually:
@@ -103,3 +104,29 @@ The keystore used for the first build was generated on the setup host under
 
 The upstream project is AGPL-3.0; this fork keeps the upstream `LICENSE` and
 remains public. This is **not** an official Immich build.
+
+
+## Test channel (pre-releases)
+
+The test channel is a GitHub **Pre-release** and is never served by the stable
+`releases/latest` endpoint. Stable users stay on `-yunshang.N` releases.
+
+- Build: `Actions → Build test APK (pre-release) → Run workflow`
+  (`base_version` defaults to `3.3.6`).
+- APK: the workflow creates a tag like `v3.3.6-yunshang-test.1` and uploads
+  APKs, checksums and `latest.json` there.
+- Pointer: a fixed `test-latest` pre-release holds the current
+  `latest.json` at
+  `https://github.com/whxciotw/immich-app/releases/download/test-latest/latest.json`.
+- The test APK is compiled with `--dart-define=YUNSHANG_TEST_CHANNEL=true`, so
+  only test builds read the test channel. Stable builds keep reading
+  `releases/latest`.
+- Test version codes use `base_code * 100 + 100 + N`; they are above the
+  current stable build and increment only within the test channel.
+- To test in-app auto update, install `test.N`, then run the test workflow
+  again to publish `test.N+1`; the installed test build should prompt on next
+  launch.
+- To go back to stable, install the current stable APK manually (a higher test
+  versionCode means Android will not offer an automatic "downgrade").
+- Builds include `YunshangUpdater` logs (switch, channel, current/remote
+  versions, ignored version, dialog failures) visible in Settings → Logs.
