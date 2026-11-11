@@ -46,6 +46,10 @@ const String kImmichAppStoreLink = "https://apps.apple.com/app/immich/id16139456
 const String kImmichPlayStoreLink = "https://play.google.com/store/apps/details?id=app.alextran.immich";
 const String kImmichLatestRelease = "https://github.com/immich-app/immich/releases/latest";
 
+// Unofficial "yunshang" build: updates are published on this fork instead of
+// the Play Store or the upstream Immich releases.
+const String kYunshangLatestRelease = "https://github.com/whxciotw/immich-app/releases/latest";
+
 const int kPhotoTabIndex = 0;
 const int kSearchTabIndex = 1;
 const int kAlbumTabIndex = 2;

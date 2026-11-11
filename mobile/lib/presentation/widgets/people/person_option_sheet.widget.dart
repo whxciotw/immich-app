@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 
 class PersonOptionSheet extends StatelessWidget {
-  const PersonOptionSheet({super.key, this.onEditName, this.onEditBirthday, this.birthdayExists = false});
+  const PersonOptionSheet({
+    super.key,
+    this.onEditName,
+    this.onEditBirthday,
+    this.onMerge,
+    this.onToggleHidden,
+    this.birthdayExists = false,
+    this.isHidden = false,
+  });
 
   final VoidCallback? onEditName;
   final VoidCallback? onEditBirthday;
+  final VoidCallback? onMerge;
+  final VoidCallback? onToggleHidden;
   final bool birthdayExists;
+  final bool isHidden;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +38,16 @@ class PersonOptionSheet extends StatelessWidget {
               leading: const Icon(Icons.cake),
               title: Text(birthdayExists ? context.t.edit_birthday : context.t.add_birthday, style: textStyle),
               onTap: onEditBirthday,
+            ),
+            ListTile(
+              leading: const Icon(Icons.call_merge),
+              title: Text('合并人物', style: textStyle),
+              onTap: onMerge,
+            ),
+            ListTile(
+              leading: Icon(isHidden ? Icons.visibility : Icons.visibility_off),
+              title: Text(isHidden ? '显示人物' : '隐藏人物', style: textStyle),
+              onTap: onToggleHidden,
             ),
           ],
         ),

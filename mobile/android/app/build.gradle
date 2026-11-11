@@ -56,6 +56,13 @@ android {
       keyPassword keyPasswordVal ?: keystoreProperties['keyPassword']
       storeFile file("../key.jks").exists() ? file("../key.jks") : file(keystoreProperties['storeFile'] ?: '../key.jks')
       storePassword storePasswordVal ?: keystoreProperties['storePassword']
+
+      // Some OEM package installers (notably MIUI/HyperOS) fail to parse APKs
+      // that only carry a v2 signature ("PackageInfo is null"). Sign with
+      // v1 + v2 + v3 for maximum compatibility.
+      enableV1Signing true
+      enableV2Signing true
+      enableV3Signing true
     }
   }
 
@@ -66,6 +73,11 @@ android {
     }
 
     release {
+      // Unofficial "yunshang" build: distinct applicationId so it can coexist
+      // with the official Immich app, and a distinguishable launcher name.
+      applicationIdSuffix ".yunshang"
+      resValue "string", "app_name", "Immich"
+
       def hasKeystore = file("../key.jks").exists() && file("../key.jks").length() > 0
       signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
       proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -105,6 +117,7 @@ dependencies {
   //Glance Widget
   implementation libs.glance.appwidget
   implementation libs.gson
+  implementation "androidx.core:core-ktx:1.13.1"
 
   // Glance Configure
   implementation libs.activity.compose

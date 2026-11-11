@@ -1,0 +1,291 @@
+name: Build test APK (pre-release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_version:
+        description: 'Base version (e.g. 3.3.6)'
+        required: true
+        default: '3.3.6'
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: yunshang-test-build
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: immich-app/immich
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BASE_VERSION: ${{ inputs.base_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git
+        run: |
+          git config user.name "yunshang-bot"
+          git config user.email "yunshang-bot@users.noreply.github.com"
+
+      - name: Resolve test version
+        id: version
+        run: |
+          set -euo pipefail
+          base="${BASE_VERSION}"
+          if ! printf '%s' "$base" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "base_version must be X.Y.Z, got: $base" >&2
+            exit 1
+          fi
+
+          existing=$(git ls-remote --tags --refs origin "refs/tags/v${base}-yunshang-test.*" \
+            | awk '{print $2}' | sed 's#refs/tags/##' || true)
+          max_index=0
+          if [ -n "${existing:-}" ]; then
+            for t in $existing; do
+              idx="${t##*.}"
+              case "$idx" in (*[!0-9]*) continue;; esac
+              [ "$idx" -gt "$max_index" ] && max_index="$idx"
+            done
+          fi
+          index=$((max_index + 1))
+
+          IFS=. read -r major minor patch <<< "$base"
+          base_code=$((major * 1000000 + minor * 10000 + patch * 100 + 99))
+          # Test codes sit above the stable build numbers for this base version.
+          version_code=$((base_code * 100 + 100 + index))
+          build_name="${base}-yunshang-test.${index}"
+          build_tag="v${build_name}"
+
+          {
+            echo "should_run=true"
+            echo "version_name=${build_name}"
+            echo "build_tag=${build_tag}"
+            echo "version_code=${version_code}"
+            echo "base=${base}"
+          } >> "$GITHUB_OUTPUT"
+          echo "building ${build_tag} (versionCode ${version_code})"
+
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: false
+
+      - name: Cache Gradle, pub and Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.pub-cache
+            ~/.cargo/registry
+            ~/.cargo/git
+            mobile/android/.gradle
+          key: yunshang-build-${{ hashFiles('mobile/pubspec.lock', 'mobile/pubspec.yaml', 'mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            yunshang-build-
+
+      - name: Setup mise (root)
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
+        with:
+          version: 2026.10.5
+          install: false
+          cache: true
+          working_directory: .
+
+      - name: Install root tools
+        run: mise install --yes
+
+      - name: Setup mise (mobile)
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca  # v5.1.1
+        with:
+          version: 2026.10.5
+          install: false
+          cache: true
+          working_directory: ./mobile
+
+      - name: Install mobile tools
+        working-directory: mobile
+        run: mise install --yes
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+
+      - name: Install JS dependencies (codegen)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Flutter dependencies
+        run: mise //mobile:install:ci
+
+      - name: Generate Dart/SDK code
+        run: mise //mobile:codegen
+
+      - name: Decode signing keystore
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_KEYSTORE_B64:-}" || { echo "ANDROID_KEYSTORE_B64 secret is missing" >&2; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 -d > mobile/android/key.jks
+          test -s mobile/android/key.jks || { echo "keystore decode failed" >&2; exit 1; }
+
+      - name: Build test APKs
+        env:
+          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER" \
+            --dart-define=YUNSHANG_TEST_CHANNEL=true
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64,android-x64 \
+            --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER" \
+            --dart-define=YUNSHANG_TEST_CHANNEL=true
+
+      - name: Collect and verify APK artifacts
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          out=mobile/build/app/outputs/flutter-apk
+          cp "$out/app-release.apk" "dist/Immich-${BUILD_TAG}-universal.apk"
+          cp "$out/app-arm64-v8a-release.apk" "dist/Immich-${BUILD_TAG}-arm64-v8a.apk"
+          cp "$out/app-armeabi-v7a-release.apk" "dist/Immich-${BUILD_TAG}-armeabi-v7a.apk"
+          cp "$out/app-x86_64-release.apk" "dist/Immich-${BUILD_TAG}-x86_64.apk"
+
+          build_tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          apksigner="$build_tools/apksigner"
+          aapt2="$build_tools/aapt2"
+
+          normalize() { tr -d '[:space:]:' | tr 'A-F' 'a-f'; }
+          expected=$(normalize < yunshang/SIGNING_CERT_SHA256.txt)
+          for apk in dist/*.apk; do
+            cert=$("$apksigner" verify --print-certs "$apk" | grep -i 'SHA-256 digest' | head -1 | sed 's/.*digest: *//' | normalize)
+            [ "$cert" = "$expected" ] || { echo "signature mismatch for $apk: $cert" >&2; exit 1; }
+          done
+
+          : > dist/apk-info.tsv
+          for apk in dist/*.apk; do
+            badging=$("$aapt2" dump badging "$apk" | head -1)
+            echo "$badging"
+            echo "$badging" | grep -q "package: name='app.alextran.immich.yunshang'" || { echo "unexpected package name in $apk" >&2; exit 1; }
+            code=$(echo "$badging" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p")
+            vname=$(echo "$badging" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
+            [ -n "$code" ] && [ -n "$vname" ] || { echo "cannot parse badging for $apk" >&2; exit 1; }
+            [ "$vname" = "$BUILD_NAME" ] || { echo "unexpected versionName for $apk: $vname" >&2; exit 1; }
+            printf '%s\t%s\t%s\n' "$(basename "$apk")" "$code" "$vname" >> dist/apk-info.tsv
+          done
+          universal_line=$(grep 'universal.apk' dist/apk-info.tsv)
+          [ "$(echo "$universal_line" | cut -f2)" = "$BUILD_NUMBER" ] || { echo "unexpected universal versionCode" >&2; exit 1; }
+          cat dist/apk-info.tsv
+
+      - name: Generate latest.json and checksums
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.version_code }}
+          BASE_TAG: ${{ steps.version.outputs.base }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime, glob, hashlib, json, os
+
+          tag = os.environ["BUILD_TAG"]
+          name = os.environ["BUILD_NAME"]
+          code = int(os.environ["BUILD_NUMBER"])
+          repo = os.environ["GITHUB_REPOSITORY"]
+          info = {}
+          for line in open("dist/apk-info.tsv"):
+              filename, version_code, version_name = line.rstrip("\n").split("\t")
+              info[filename] = int(version_code)
+          assets = {}
+          checksums = []
+          for path in sorted(glob.glob("dist/*.apk")):
+              filename = os.path.basename(path)
+              suffix = filename[:-4].replace(f"Immich-{tag}-", "")
+              digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+              checksums.append(f"{digest}  {filename}")
+              assets[suffix] = {
+                  "url": f"https://github.com/{repo}/releases/download/{tag}/{filename}",
+                  "sha256": digest,
+                  "versionCode": info[filename],
+              }
+          top_code = max(info.values()) if info else code
+          payload = {
+              "versionName": name,
+              "versionCode": top_code,
+              "tag": tag,
+              "publishedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+              "notesUrl": f"https://github.com/{repo}/releases/tag/{tag}",
+              "upstreamTag": os.environ["BASE_TAG"],
+              "assets": assets,
+          }
+          json.dump(payload, open("dist/latest.json", "w"), indent=2, ensure_ascii=False)
+          open("dist/sha256sums.txt", "w").write("\n".join(checksums) + "\n")
+          PY
+          cat dist/latest.json
+
+      - name: Create pre-release
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+          BUILD_NAME: ${{ steps.version.outputs.version_name }}
+        run: |
+          set -euo pipefail
+          fingerprint=$(tr -d '[:space:]' < yunshang/SIGNING_CERT_SHA256.txt)
+          cat > release-notes.md <<NOTES
+          **Test build** — not a stable release. Normal users are not updated to this version.
+
+          - Test version: ${BUILD_NAME}
+          - Test channel: https://github.com/${GITHUB_REPOSITORY}/releases/download/test-latest/latest.json
+          - Signing certificate SHA-256: \`${fingerprint}\`
+          NOTES
+          gh release create "$BUILD_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Immich test build ${BUILD_NAME}" \
+            --notes-file release-notes.md \
+            --prerelease \
+            dist/*.apk dist/latest.json dist/sha256sums.txt
+
+      - name: Update test channel pointer
+        env:
+          BUILD_TAG: ${{ steps.version.outputs.build_tag }}
+        run: |
+          set -euo pipefail
+          if ! gh release view test-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create test-latest \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "yunshang test channel" \
+              --notes "Test-channel pointer for yunshang builds. Normal users are not updated from this release." \
+              --prerelease
+          fi
+          gh release upload test-latest dist/latest.json --repo "$GITHUB_REPOSITORY" --clobber
+          echo "test channel now points at ${BUILD_TAG}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ steps.version.outputs.build_tag }}
+          path: dist/
+          retention-days: 14

@@ -24,12 +24,15 @@ class ServerUpdateNotification extends HookConsumerWidget {
     Future<void> openUpdateLink() {
       String url;
       if (serverInfoState.versionStatus == VersionStatus.serverOutOfDate) {
+        // The server itself is out of date: link to the upstream Immich releases.
         url = kImmichLatestRelease;
       } else {
         if (Platform.isIOS) {
           url = kImmichAppStoreLink;
         } else if (Platform.isAndroid) {
-          url = kImmichPlayStoreLink;
+          // The app is out of date: this unofficial build is updated from its
+          // own GitHub releases, not from the Play Store.
+          url = kYunshangLatestRelease;
         } else {
           // Fallback to latest release for other/unknown platforms
           url = kImmichLatestRelease;

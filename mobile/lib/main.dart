@@ -43,12 +43,28 @@ import 'package:immich_mobile/utils/debug_print.dart';
 import 'package:immich_mobile/utils/fallback_localizations.dart';
 import 'package:immich_mobile/utils/licenses.dart';
 import 'package:immich_mobile/utils/migration.dart';
+import 'package:immich_mobile/yunshang/updater/yunshang_updater.dart';
 import 'package:immich_mobile/wm_executor.dart';
 import 'package:immich_ui/immich_ui.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:logging/logging.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:timezone/data/latest.dart';
+
+/// Captures the root Navigator for context-free startup update checks.
+class RootNavigatorCapture extends NavigatorObserver {
+  static NavigatorState? captured;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    captured ??= route.navigator;
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    captured ??= newRoute?.navigator;
+  }
+}
 
 void main() async {
   try {
@@ -138,6 +154,27 @@ class ImmichApp extends ConsumerStatefulWidget {
 }
 
 class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserver {
+  DateTime? _pausedAt;
+
+  void _scheduleLaunchUpdateCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runLaunchUpdateCheck(0));
+  }
+
+  void _runLaunchUpdateCheck(int attempt) {
+    if (!mounted) {
+      return;
+    }
+    final navContext = RootNavigatorCapture.captured?.context;
+    if (navContext != null) {
+      unawaited(YunshangUpdater.maybeCheckOnLaunch(navContext));
+      return;
+    }
+    if (attempt >= 3) {
+      dPrint(() => 'Update check skipped: navigator is not ready');
+      return;
+    }
+    Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)), () => _runLaunchUpdateCheck(attempt + 1));
+  }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
@@ -145,11 +182,17 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         dPrint(() => "[APP STATE] resumed");
         unawaited(ref.read(appStateProvider.notifier).handleAppResume());
         unawaited(ref.read(viewIntentHandlerProvider).onAppResumed());
+        final pausedAt = _pausedAt;
+        _pausedAt = null;
+        if (pausedAt != null && DateTime.now().difference(pausedAt) > const Duration(minutes: 30)) {
+          _scheduleLaunchUpdateCheck();
+        }
       case AppLifecycleState.inactive:
         dPrint(() => "[APP STATE] inactive");
         ref.read(appStateProvider.notifier).handleAppInactivity();
       case AppLifecycleState.paused:
         dPrint(() => "[APP STATE] paused");
+        _pausedAt = DateTime.now();
         unawaited(ref.read(appStateProvider.notifier).handleAppPause());
       case AppLifecycleState.detached:
         dPrint(() => "[APP STATE] detached");
@@ -256,6 +299,8 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
       }
     });
 
+    _scheduleLaunchUpdateCheck();
+
     ref.read(viewIntentHandlerProvider).init();
     ref.read(shareIntentUploadProvider.notifier).init();
   }
@@ -301,7 +346,11 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
         ),
         routerConfig: router.config(
           deepLinkBuilder: _deepLinkBuilder,
-          navigatorObservers: () => [AppNavigationObserver(ref: ref), TransitioningRouteObserver()],
+          navigatorObservers: () => [
+            AppNavigationObserver(ref: ref),
+            TransitioningRouteObserver(),
+            RootNavigatorCapture(),
+          ],
         ),
       ),
     );

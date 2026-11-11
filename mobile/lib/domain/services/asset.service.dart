@@ -1,5 +1,6 @@
 import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
+import 'package:immich_mobile/domain/models/place.model.dart';
 import 'package:immich_mobile/domain/models/asset_edit.model.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
@@ -72,7 +73,11 @@ class AssetService {
     return _remoteRepository.watchExif(id);
   }
 
-  Future<List<(String, String)>> getPlaces(String userId) {
+  Future<List<({double latitude, double longitude})>> getGeotaggedLocations() {
+    return _remoteRepository.getGeotaggedLocations();
+  }
+
+  Future<List<PlaceEntry>> getPlaces(String userId) {
     return _remoteRepository.getPlaces(userId);
   }
 

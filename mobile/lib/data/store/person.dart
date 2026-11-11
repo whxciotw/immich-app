@@ -26,7 +26,7 @@ extension type const PersonStore._(Provider<PersonMutations> _provider) implemen
   /// Get all known people, honoring the user's minimum detected face count preference
   ///
   /// **NOTE:** This only hits the local DB
-  AutoDisposeStreamProvider<List<Person>> all() => _allProvider;
+  AutoDisposeStreamProvider<List<Person>> all({bool includeHidden = false}) => _allProvider(includeHidden);
 }
 
 final _peopleDb = driftProvider.select((db) => db.peopleDatabaseRepository);
@@ -39,12 +39,12 @@ final _forAssetProvider = StreamProvider.autoDispose.family<List<Person>, String
   (ref, assetId) => ref.watch(_peopleDb).watchPeopleForAsset(assetId).distinct(const ListEquality<Person>().equals),
 );
 
-final _allProvider = StreamProvider.autoDispose<List<Person>>((ref) async* {
+final _allProvider = StreamProvider.autoDispose.family<List<Person>, bool>((ref, includeHidden) async* {
   final prefs = await ref.watch(UserMetadataStore.instance.preferences().future);
 
   yield* ref
       .watch(_peopleDb)
-      .watchAll(minFaces: prefs?.minimumFaces ?? 3)
+      .watchAll(minFaces: prefs?.minimumFaces ?? 3, includeHidden: includeHidden)
       .distinct(const ListEquality<Person>().equals);
 });
 
@@ -61,5 +61,38 @@ class PersonMutations extends StoreMutations {
   Future<int> updateBirthday(String personId, DateTime birthday) async {
     await read(personApiRepositoryProvider).update(personId, birthday: birthday);
     return read(_peopleDb).updateBirthday(personId, birthday);
+  }
+
+  /// Update a person's visibility
+  Future<Person> updateHidden(String personId, bool isHidden) async {
+    final person = await read(personApiRepositoryProvider).update(personId, isHidden: isHidden);
+    await read(_peopleDb).updateHidden(personId, isHidden);
+    return person;
+  }
+
+  /// Merge [personIds] into [targetId] and return the merged person
+  Future<Person?> mergePeople(String targetId, List<String> personIds) async {
+    final merged = await read(personApiRepositoryProvider).mergePeople(targetId, personIds);
+    if (merged != null) {
+      await read(_peopleDb).applyMerge(merged, personIds);
+    }
+    return merged;
+  }
+
+  /// Hide/unhide multiple people through the server bulk endpoint.
+  /// Returns the number of successfully updated people.
+  Future<int> updateHiddenBulk(Iterable<Person> people, bool isHidden) async {
+    final list = people.toList();
+    if (list.isEmpty) {
+      return 0;
+    }
+    final successIds = await read(personApiRepositoryProvider).updateHidden(
+      list.map((person) => person.id),
+      isHidden,
+    );
+    for (final id in successIds) {
+      await read(_peopleDb).updateHidden(id, isHidden);
+    }
+    return successIds.length;
   }
 }

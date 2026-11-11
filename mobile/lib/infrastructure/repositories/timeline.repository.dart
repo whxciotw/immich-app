@@ -726,6 +726,7 @@ extension on Expression<DateTime> {
     return switch (groupBy) {
       GroupAssetsBy.day || GroupAssetsBy.auto => localTimeExp.date,
       GroupAssetsBy.month => localTimeExp.strftime("%Y-%m"),
+      GroupAssetsBy.year => localTimeExp.strftime("%Y"),
       GroupAssetsBy.none => throw ArgumentError("GroupAssetsBy.none is not supported for date formatting"),
     };
   }
@@ -746,6 +747,7 @@ extension on String {
     final format = switch (groupBy) {
       GroupAssetsBy.day || GroupAssetsBy.auto => "y-M-d",
       GroupAssetsBy.month => "y-M",
+      GroupAssetsBy.year => "y",
       GroupAssetsBy.none => throw ArgumentError("GroupAssetsBy.none is not supported for date formatting"),
     };
     return DateFormat(format, 'en').parse(this);

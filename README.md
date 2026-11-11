@@ -1,126 +1,93 @@
-<p align="center"> 
-  <br/>
-  <a href="https://opensource.org/license/agpl-v3"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg?color=3F51B5&style=for-the-badge&label=License&logoColor=000000&labelColor=ececec" alt="License: AGPLv3"></a>
-  <a href="https://discord.immich.app">
-    <img src="https://img.shields.io/discord/979116623879368755.svg?label=Discord&logo=Discord&style=for-the-badge&logoColor=000000&labelColor=ececec" alt="Discord"/>
-  </a>
-  <br/>
-  <br/>
+# Immich · yunshang build（非官方 Android 构建）
+
+<p>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=for-the-badge" alt="License: AGPLv3"></a>
+  <a href="https://github.com/whxciotw/immich-app/releases/latest"><img src="https://img.shields.io/github/v/release/whxciotw/immich-app?style=for-the-badge&label=Release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/status-unofficial-orange?style=for-the-badge" alt="Unofficial">
 </p>
+
+> **这不是 Immich 官方项目。**
+>
+> 本仓库是 [immich-app/immich](https://github.com/immich-app/immich) 的 fork，
+> 只用于发布个人自用的 Android APK。服务器端请使用官方镜像与文档：
+> <https://immich.app> / <https://docs.immich.app>。
+
+## 这个构建和官方 App 有什么区别
+
+| 项 | 官方 App | 本仓库（yunshang build） |
+| --- | --- | --- |
+| Places 地图初始位置 | 写死夏威夷 / `(0,0) zoom 0` | 设备最近位置 → 相册分布范围 → 中性视野 |
+| Places 列表 | 平铺城市 | **国家 → 省 → 市 三级折叠**，默认展开国家，支持全部展开/折叠、搜索、按名称排序、显示照片数量 |
+| 人物管理 | 仅网页端 | 合并人物、隐藏/显示人物、查看已隐藏人物、多选批量隐藏/显示 |
+| 时间线分组 | 仅 月/月份+日期 | 照片页 年/月/日 横条，与设置双向同步 |
+| 照片列数 | 固定 2–6 列 | 默认按屏幕宽度自适应（390dp 基准 9/5/3 列），折叠屏自动增加 |
+| 更新来源 | Play Store / F-Droid / App Store | 本仓库 **GitHub Releases**（App 内检查/下载/安装 + Obtainium） |
+| 包名 | `app.alextran.immich` | `app.alextran.immich.yunshang`（可与官方共存） |
+| 桌面名称 | `Immich` | `Immich`（同名，按包名区分） |
+
+## 截图
 
 <p align="center">
-<img src="design/immich-logo-stacked-light.svg" width="300" title="Login With Custom URL">
-</p>
-<h3 align="center">High performance self-hosted photo and video management solution</h3>
-<br/>
-<a href="https://immich.app">
-<img src="design/immich-screenshots.png" title="Main Screenshot">
-</a>
-<br/>
-
-<p align="center">
-  <a href="readme_i18n/README_ca_ES.md">Català</a>
-  <a href="readme_i18n/README_es_ES.md">Español</a>
-  <a href="readme_i18n/README_fr_FR.md">Français</a>
-  <a href="readme_i18n/README_it_IT.md">Italiano</a>
-  <a href="readme_i18n/README_ja_JP.md">日本語</a>
-  <a href="readme_i18n/README_ko_KR.md">한국어</a>
-  <a href="readme_i18n/README_de_DE.md">Deutsch</a>
-  <a href="readme_i18n/README_nl_NL.md">Nederlands</a>
-  <a href="readme_i18n/README_tr_TR.md">Türkçe</a>
-  <a href="readme_i18n/README_zh_CN.md">简体中文</a>
-  <a href="readme_i18n/README_zh_TW.md">正體中文</a>
-  <a href="readme_i18n/README_uk_UA.md">Українська</a>
-  <a href="readme_i18n/README_ru_RU.md">Русский</a>
-  <a href="readme_i18n/README_bg_BG.md">Български</a>
-  <a href="readme_i18n/README_pl_PL.md">Polski</a>
-  <a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
-  <a href="readme_i18n/README_sv_SE.md">Svenska</a>
-  <a href="readme_i18n/README_ar_JO.md">العربية</a>
-  <a href="readme_i18n/README_vi_VN.md">Tiếng Việt</a>
-  <a href="readme_i18n/README_th_TH.md">ภาษาไทย</a>
-  <a href="readme_i18n/README_ml_IN.md">മലയാളം</a>
+  <img src="docs/images/places-tree.jpg" width="360" alt="Places 三级折叠">
 </p>
 
+<p align="center"><em>地点页：国家 → 省 → 市三级折叠，默认展开国家，可全部展开/折叠、搜索，按名称排序。</em></p>
 
-> [!WARNING]
-> ⚠️ Always follow [3-2-1](https://www.backblaze.com/blog/the-3-2-1-backup-strategy/) backup plan for your precious photos and videos!
-> 
- 
+## 下载与安装
 
-> [!NOTE]
-> You can find the main documentation, including installation guides, at https://immich.app/.
+- 最新版本：<https://github.com/whxciotw/immich-app/releases/latest>
+- 多数手机选 `arm64-v8a`；不确定机型选 `universal`。
+- 首次安装需要允许"安装未知应用"；官方 Immich 可以保留（桌面会出现两个同名图标，可按包名区分）。
+- 签名证书 SHA-256：[`yunshang/SIGNING_CERT_SHA256.txt`](yunshang/SIGNING_CERT_SHA256.txt)
 
-## Links
+  ```
+  50:64:5F:E3:2B:CF:18:06:BA:AF:4D:38:90:A1:23:D0:84:D8:7C:0F:BB:5A:3F:B3:F6:50:A6:B9:A2:05:9D:CF
+  ```
 
-- [Documentation](https://docs.immich.app/)
-- [About](https://docs.immich.app/overview/introduction)
-- [Installation](https://docs.immich.app/install/requirements)
-- [Roadmap](https://immich.app/roadmap)
-- [Demo](#demo)
-- [Features](#features)
-- [Translations](https://docs.immich.app/developer/translations)
-- [Contributing](https://docs.immich.app/overview/support-the-project)
+  可用 `apksigner verify --print-certs <apk>` 或手机上的 APK 校验工具核对；指纹不一致请不要安装。
 
-## Demo
+## 更新
 
-Access the demo [here](https://demo.immich.app). For the mobile app, you can use `https://demo.immich.app` for the `Server Endpoint URL`.
+- **App 内更新**：Settings → Advanced → `启动时检查更新`（默认开）/ `自动下载更新包`（默认关）/
+  `立即检查更新`（手动，绕过节流与"忽略此版本"）。
+  发现新版本后会下载并拉起 Android 系统安装器。普通 App 无法静默安装，最后一步需要你点"安装"确认。
+- **Obtainium**：用 [Obtainium](https://github.com/ImranR98/Obtainium) 添加本仓库即可跟踪 Releases。
+- 不要从 Play 商店更新官方 Immich 来更新本 App：包名和签名都不同。
 
-### Login credentials
+## 自动构建
 
-| Email           | Password |
-| --------------- | -------- |
-| demo@immich.app | demo     |
+上游每发布一个 stable 版本，GitHub Actions 会自动：
 
-## Features
+1. 找到最新 stable tag（12h debounce）；
+2. merge 进 `main`（冲突会自动开 issue）；
+3. 用该 tag 固定的 Flutter/JDK 工具链构建 4 个 APK；
+4. 校验签名指纹、包名、versionCode；
+5. 发布 `vX.Y.Z-yunshang.N`（APK + `latest.json` + `sha256sums.txt`）。
 
-| Features                                     | Mobile | Web |
-| :------------------------------------------- | ------ | --- |
-| Upload and view videos and photos            | Yes    | Yes |
-| Auto backup when the app is opened           | Yes    | N/A |
-| Prevent duplication of assets                | Yes    | Yes |
-| Selective album(s) for backup                | Yes    | N/A |
-| Download photos and videos to local device   | Yes    | Yes |
-| Multi-user support                           | Yes    | Yes |
-| Album and Shared albums                      | Yes    | Yes |
-| Scrubbable/draggable scrollbar               | Yes    | Yes |
-| Support raw formats                          | Yes    | Yes |
-| Metadata view (EXIF, map)                    | Yes    | Yes |
-| Search by metadata, objects, faces, and CLIP | Yes    | Yes |
-| Administrative functions (user management)   | No     | Yes |
-| Background backup                            | Yes    | N/A |
-| Virtual scroll                               | Yes    | Yes |
-| OAuth support                                | Yes    | Yes |
-| API Keys                                     | N/A    | Yes |
-| LivePhoto/MotionPhoto backup and playback    | Yes    | Yes |
-| Support 360 degree image display             | No     | Yes |
-| User-defined storage structure               | Yes    | Yes |
-| Public Sharing                               | Yes    | Yes |
-| Archive and Favorites                        | Yes    | Yes |
-| Global Map                                   | Yes    | Yes |
-| Partner Sharing                              | Yes    | Yes |
-| Facial recognition and clustering            | Yes    | Yes |
-| Memories (x years ago)                       | Yes    | Yes |
-| Offline support                              | Yes    | No  |
-| Read-only gallery                            | Yes    | Yes |
-| Stacked Photos                               | Yes    | Yes |
-| Tags                                         | No     | Yes |
-| Folder View                                  | Yes    | Yes |
+细节见 [YUNSHANG.md](YUNSHANG.md)。如果 fork 的定时任务没有触发（GitHub 对 fork 的 schedule 默认可能关闭），
+到 `Actions → Sync upstream and build APK → Run workflow` 手动运行一次即可。
 
-## Translations
+## 相关项目
 
-Read more about translations [here](https://docs.immich.app/developer/translations).
+| 项目 | 作用 |
+| --- | --- |
+| **本仓库** `immich-app` | 非官方 Android 构建（APK） |
+| [whxciotw/immich-amap](https://github.com/whxciotw/immich-amap) | 高德底图样式、GCJ-02 纠偏、中文地名库、通用 Docker 部署 |
+| [whxciotw/immich](https://github.com/whxciotw/immich) | 两个项目的门户/文档索引与版本兼容说明 |
 
-<a href="https://hosted.weblate.org/engage/immich/">
-<img src="https://hosted.weblate.org/widget/immich/immich/multi-auto.svg" alt="Translation status" />
-</a>
+## 许可与声明
 
-## Repository activity
+- 上游 Immich 使用 **AGPL-3.0**，见 [LICENSE](LICENSE)；本仓库保持公开并保留上游许可证与版权声明。
+- 本构建是**非官方构建**，与 Immich 项目没有隶属关系。请勿将其当作官方版本传播或用于商业转售。
+- 上游源码与文档：<https://github.com/immich-app/immich> · <https://docs.immich.app>
 
-![Activities](https://repobeats.axiom.co/api/embed/9e86d9dc3ddd137161f2f6d2e758d7863b1789cb.svg "Repobeats analytics image")
+## English
 
-## Contributors
+Unofficial Android build of Immich (fork of [immich-app/immich](https://github.com/immich-app/immich)):
 
-<a href="https://github.com/immich-app/immich/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=immich-app/immich" width="100%"/>
-</a>
+- country/province/city collapsible tree on the Places page, device-location fix for the map;
+- separate application id `app.alextran.immich.yunshang` (installs next to the official app);
+- in-app updates from this repository's GitHub Releases.
+
+Download from [Releases](https://github.com/whxciotw/immich-app/releases/latest).
+Not affiliated with the Immich project. AGPL-3.0.

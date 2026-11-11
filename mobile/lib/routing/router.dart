@@ -57,6 +57,7 @@ import 'package:immich_mobile/presentation/pages/map.page.dart';
 import 'package:immich_mobile/presentation/pages/memory.page.dart';
 import 'package:immich_mobile/presentation/pages/memory_list.page.dart';
 import 'package:immich_mobile/presentation/pages/partner_detail.page.dart';
+import 'package:immich_mobile/presentation/pages/merge_people.page.dart';
 import 'package:immich_mobile/presentation/pages/people_collection.page.dart';
 import 'package:immich_mobile/presentation/pages/person.page.dart';
 import 'package:immich_mobile/presentation/pages/place.page.dart';
@@ -182,6 +183,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: SyncStatusRoute.page, guards: [_duplicateGuard]),
     AutoRoute(page: PeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: PersonRoute.page, guards: [_authGuard]),
+    AutoRoute(page: MergePeopleRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: BackupOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AlbumOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MapRoute.page, guards: [_authGuard, _duplicateGuard]),

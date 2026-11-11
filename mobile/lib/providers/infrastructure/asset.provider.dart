@@ -1,4 +1,5 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:immich_mobile/domain/models/place.model.dart';
 import 'package:immich_mobile/domain/services/asset.service.dart';
 import 'package:immich_mobile/providers/infrastructure/db.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
@@ -17,7 +18,7 @@ final assetServiceProvider = Provider((ref) {
   );
 });
 
-final placesProvider = FutureProvider<List<(String, String)>>((ref) {
+final placesProvider = FutureProvider<List<PlaceEntry>>((ref) {
   final assetService = ref.watch(assetServiceProvider);
   final auth = ref.watch(currentUserProvider);
 

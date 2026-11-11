@@ -59,7 +59,14 @@ enum StoreKey<T> {
   legacyMapIncludeArchived<bool>._(121),
   legacyMapThemeMode<int>._(124),
   legacyMapwithPartners<bool>._(125),
-  legacyLogLevel<int>._(115);
+  legacyLogLevel<int>._(115),
+
+  // yunshang updater (unofficial build)
+  yunshangCheckUpdates<bool>._(9001),
+  yunshangAutoDownload<bool>._(9002),
+  yunshangIgnoredVersion<String>._(9003),
+  yunshangLastCheck<int>._(9004);
+
 
   const StoreKey._(this.id);
   final int id;

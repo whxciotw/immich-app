@@ -36,11 +36,9 @@ class GroupSettings extends HookConsumerWidget {
         SettingGroupTitle(title: context.t.asset_list_group_by_sub_title, icon: Icons.group_work_outlined),
         SettingsRadioListTile(
           groups: [
-            SettingsRadioGroup(
-              title: context.t.asset_list_layout_settings_group_by_month_day,
-              value: GroupAssetsBy.day,
-            ),
+            SettingsRadioGroup(title: context.t.year, value: GroupAssetsBy.year),
             SettingsRadioGroup(title: context.t.month, value: GroupAssetsBy.month),
+            SettingsRadioGroup(title: context.t.day, value: GroupAssetsBy.day),
           ],
           groupBy: groupBy.value,
           onRadioChanged: changeGroupValue,

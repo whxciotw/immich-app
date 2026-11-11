@@ -9,6 +9,7 @@ import 'package:immich_mobile/data/db/main/table/remote/stack.drift.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/asset_edit.model.dart';
 import 'package:immich_mobile/domain/models/exif.model.dart';
+import 'package:immich_mobile/domain/models/place.model.dart';
 import 'package:immich_mobile/domain/models/stack.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/remote_asset.repository.drift.dart';
 import 'package:immich_mobile/utils/option.dart';
@@ -86,7 +87,33 @@ class RemoteAssetRepository extends DatabaseAccessor<Drift> with $RemoteAssetRep
       .map((row) => row.toDto())
       .watchSingleOrNull();
 
-  Future<List<(String, String)>> getPlaces(String userId) {
+  /// All geotagged assets (timeline, not deleted) as lat/lon pairs.
+  /// Used to derive a sensible initial map view when the device location is
+  /// not available (no permission / no cached fix).
+  Future<List<({double latitude, double longitude})>> getGeotaggedLocations() {
+    final exif = _db.remoteExifEntity;
+    final asset = _db.remoteAssetEntity;
+
+    final query =
+        _db.selectOnly(exif).join([
+            innerJoin(asset, asset.id.equalsExp(exif.assetId)),
+          ])
+          ..addColumns([exif.latitude, exif.longitude])
+          ..where(
+            exif.latitude.isNotNull() &
+                exif.longitude.isNotNull() &
+                asset.deletedAt.isNull() &
+                asset.visibility.equals(AssetVisibility.timeline.index),
+          );
+
+    return query.map((row) {
+      final latitude = row.read(exif.latitude);
+      final longitude = row.read(exif.longitude);
+      return (latitude: latitude!, longitude: longitude!);
+    }).get();
+  }
+
+  Future<List<PlaceEntry>> getPlaces(String userId) {
     final asset = Subquery(
       _db.remoteAssetEntity.select()
         ..where((row) => row.ownerId.equals(userId))
@@ -94,27 +121,40 @@ class RemoteAssetRepository extends DatabaseAccessor<Drift> with $RemoteAssetRep
       "asset",
     );
 
+    final exif = _db.remoteExifEntity;
+    final city = exif.city;
+    final state = exif.state;
+    final country = exif.country;
+    final thumbnailId = exif.assetId;
+    final assetCount = thumbnailId.count();
+
     final query =
         asset.selectOnly().join([
             innerJoin(
-              _db.remoteExifEntity,
-              _db.remoteExifEntity.assetId.equalsExp(asset.ref(_db.remoteAssetEntity.id)),
+              exif,
+              exif.assetId.equalsExp(asset.ref(_db.remoteAssetEntity.id)),
               useColumns: false,
             ),
           ])
-          ..addColumns([_db.remoteExifEntity.city, _db.remoteExifEntity.assetId])
+          ..addColumns([country, state, city, thumbnailId, assetCount])
           ..where(
-            _db.remoteExifEntity.city.isNotNull() &
+            city.isNotNull() &
                 asset.ref(_db.remoteAssetEntity.deletedAt).isNull() &
                 asset.ref(_db.remoteAssetEntity.visibility).equals(AssetVisibility.timeline.index),
           )
-          ..groupBy([_db.remoteExifEntity.city])
-          ..orderBy([OrderingTerm.asc(_db.remoteExifEntity.city)]);
+          ..groupBy([country, state, city])
+          ..orderBy([OrderingTerm.asc(country), OrderingTerm.asc(state), OrderingTerm.asc(city)]);
 
     return query.map((row) {
-      final assetId = row.read(_db.remoteExifEntity.assetId);
-      final city = row.read(_db.remoteExifEntity.city);
-      return (city!, assetId!);
+      final thumbnail = row.read(thumbnailId);
+      final value = row.read(city);
+      return PlaceEntry(
+        country: row.read(country),
+        state: row.read(state),
+        city: value!,
+        thumbnailAssetId: thumbnail!,
+        assetCount: row.read(assetCount) ?? 0,
+      );
     }).get();
   }
 

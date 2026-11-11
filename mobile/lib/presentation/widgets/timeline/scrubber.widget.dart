@@ -38,6 +38,7 @@ class Scrubber extends ConsumerStatefulWidget {
 
   /// Whether an app bar is present, affects coordinate calculations
   final bool hasAppBar;
+  final GroupAssetsBy groupBy;
 
   Scrubber({
     super.key,
@@ -48,6 +49,7 @@ class Scrubber extends ConsumerStatefulWidget {
     this.monthSegmentSnappingOffset,
     this.snapToMonth = true,
     this.hasAppBar = true,
+    this.groupBy = GroupAssetsBy.day,
     required this.child,
   }) : assert(child.scrollDirection == Axis.vertical);
 
@@ -55,7 +57,11 @@ class Scrubber extends ConsumerStatefulWidget {
   ConsumerState createState() => ScrubberState();
 }
 
-List<_Segment> _buildSegments({required List<Segment> layoutSegments, required double timelineHeight}) {
+List<_Segment> _buildSegments({
+  required List<Segment> layoutSegments,
+  required double timelineHeight,
+  required GroupAssetsBy groupBy,
+}) {
   const double offsetThreshold = 40.0;
 
   final segments = <_Segment>[];
@@ -115,7 +121,11 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
   void initState() {
     super.initState();
     _isDragging = false;
-    _segments = _buildSegments(layoutSegments: widget.layoutSegments, timelineHeight: _scrubberHeight);
+    _segments = _buildSegments(
+      layoutSegments: widget.layoutSegments,
+      timelineHeight: _scrubberHeight,
+      groupBy: widget.groupBy,
+    );
     _thumbAnimationController = AnimationController(vsync: this, duration: kTimelineScrubberFadeInDuration);
     _thumbAnimation = CurvedAnimation(parent: _thumbAnimationController, curve: Curves.fastEaseInToSlowEaseOut);
     _labelAnimationController = AnimationController(vsync: this, duration: kTimelineScrubberFadeInDuration);
@@ -135,7 +145,11 @@ class ScrubberState extends ConsumerState<Scrubber> with TickerProviderStateMixi
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.layoutSegments.lastOrNull?.endOffset != widget.layoutSegments.lastOrNull?.endOffset) {
-      _segments = _buildSegments(layoutSegments: widget.layoutSegments, timelineHeight: _scrubberHeight);
+      _segments = _buildSegments(
+      layoutSegments: widget.layoutSegments,
+      timelineHeight: _scrubberHeight,
+      groupBy: widget.groupBy,
+    );
       _monthCount = getMonthCount();
     }
   }

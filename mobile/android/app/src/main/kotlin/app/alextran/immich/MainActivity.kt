@@ -32,6 +32,7 @@ class MainActivity : FlutterFragmentActivity() {
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
     registerPlugins(this, flutterEngine)
+    YunshangApkInstaller(this).register(flutterEngine.dartExecutor.binaryMessenger)
     flutterEngine.plugins.add(PasskeyPlugin())
   }
 

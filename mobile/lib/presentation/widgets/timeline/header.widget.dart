@@ -47,6 +47,7 @@ class TimelineHeader extends HookWidget {
     }
 
     final date = (bucket as TimeBucket).date;
+    final isYearHeader = header == HeaderType.year;
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
 
@@ -58,6 +59,17 @@ class TimelineHeader extends HookWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            if (isYearHeader)
+              Row(
+                children: [
+                  Text(
+                    DateFormat.y(resolvedDateTimeLocale()).format(date),
+                    style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+                  ),
+                  const Spacer(),
+                  _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
+                ],
+              ),
             if (isMonthHeader)
               Row(
                 children: [
