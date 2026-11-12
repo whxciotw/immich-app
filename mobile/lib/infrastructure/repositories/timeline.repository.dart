@@ -45,9 +45,12 @@ class TimelineRepository extends DatabaseAccessor<Drift> with $TimelineRepositor
     }
 
     return _db.mergedAssetDrift.mergedBucket(userIds: userIds, groupBy: groupBy.index).map((row) {
-      final date = row.bucketDate!.truncateDate(groupBy);
-      return TimeBucket(date: date, assetCount: row.assetCount);
-    }).watch();
+      final bucketDate = row.bucketDate;
+      if (bucketDate == null) {
+        return null;
+      }
+      return TimeBucket(date: bucketDate.truncateDate(groupBy), assetCount: row.assetCount);
+    }).where((bucket) => bucket != null).cast<Bucket>().watch();
   }
 
   Future<List<BaseAsset>> _getMainBucketAssets(List<String> userIds, {required int offset, required int count}) {
