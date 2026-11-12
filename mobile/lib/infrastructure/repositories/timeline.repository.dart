@@ -50,7 +50,7 @@ class TimelineRepository extends DatabaseAccessor<Drift> with $TimelineRepositor
         return null;
       }
       return TimeBucket(date: bucketDate.truncateDate(groupBy), assetCount: row.assetCount);
-    }).where((bucket) => bucket != null).cast<Bucket>().watch();
+    }).watch().map((buckets) => buckets.whereType<Bucket>().toList(growable: false));
   }
 
   Future<List<BaseAsset>> _getMainBucketAssets(List<String> userIds, {required int offset, required int count}) {
