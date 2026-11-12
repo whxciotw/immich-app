@@ -97,7 +97,11 @@ jobs:
           fi
 
           # Idempotency: if we already published vX.Y.Z-yunshang.N, stop.
-          existing=$(git ls-remote --tags --refs origin "refs/tags/${ver}-yunshang.*" | awk '{print $2}' | sed 's#refs/tags/##' || true)
+          # Only count stable -yunshang.N tags. Test-channel tags
+          # (vX.Y.Z-yunshang-test.N) must not make the stable build think it
+          # has already published this upstream version.
+          existing=$(git ls-remote --tags --refs origin "refs/tags/${ver}-yunshang.*" \
+            | awk '{print $2}' | sed 's#refs/tags/##' | grep -E "^${ver}-yunshang\\.[0-9]+$" || true)
           max_index=0
           if [ -n "${existing:-}" ]; then
             for t in $existing; do
