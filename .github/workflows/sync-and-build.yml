@@ -24,10 +24,6 @@ on:
 permissions:
   contents: write
   issues: write
-  # Upstream releases (e.g. v3.4.2) may modify .github/workflows/*. GitHub
-  # refuses to let the GITHUB_TOKEN (a GitHub App token) create/update workflow
-  # files without this permission, which made the push of merged commits fail.
-  workflows: write
 
 concurrency:
   group: yunshang-sync-build
@@ -146,12 +142,25 @@ jobs:
           # based on a shallow v3.3.6 snapshot).
           git fetch --unshallow origin 2>/dev/null || true
           git fetch -q "https://github.com/${UPSTREAM}.git" "refs/tags/${UPSTREAM_TAG}"
-          if ! git merge --no-edit FETCH_HEAD; then
+          if ! git merge --no-commit FETCH_HEAD; then
             gh issue create --repo "$GITHUB_REPOSITORY" \
               --title "Upstream merge conflict for ${UPSTREAM_TAG}" \
               --body "Automatic merge of upstream ${UPSTREAM_TAG} failed. Resolve the conflict on main manually (keep the yunshang changes), then re-run the workflow." || true
             exit 1
           fi
+          # The default GITHUB_TOKEN is a GitHub App token, and GitHub refuses
+          # to let it create/update anything under .github/workflows/ unless
+          # the App installation itself has the Workflows permission — which a
+          # workflow `permissions:` block cannot grant. Upstream releases do
+          # touch workflow files (e.g. v3.4.2 changed build-mobile.yml), so
+          # restore the fork's own workflow files before committing the merge.
+          # The fork disables all upstream workflows anyway, so nothing is lost.
+          git checkout ORIG_HEAD -- .github/workflows/
+          for f in $(git diff --name-only --diff-filter=A ORIG_HEAD -- .github/workflows/); do
+            git rm --quiet --cached "$f"
+            rm -f "$f"
+          done
+          git commit --no-edit
 
       - name: Push synced main
         if: steps.version.outputs.should_run == 'true'
