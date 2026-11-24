@@ -24,6 +24,10 @@ on:
 permissions:
   contents: write
   issues: write
+  # Upstream releases (e.g. v3.4.2) may modify .github/workflows/*. GitHub
+  # refuses to let the GITHUB_TOKEN (a GitHub App token) create/update workflow
+  # files without this permission, which made the push of merged commits fail.
+  workflows: write
 
 concurrency:
   group: yunshang-sync-build
